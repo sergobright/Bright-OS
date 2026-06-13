@@ -17,3 +17,9 @@ Rationale: This makes stable project rules explicit and keeps future feature or 
 Decision: Use SocratiCode for semantic code search in Bright OS after confirming the codebase index is complete. Continue using `rg` for exact string matching, file discovery, and non-semantic repository inspection.
 
 Rationale: SocratiCode provides indexed semantic code discovery, while `rg` remains the fastest fit for exact local searches.
+
+## 2026-06-13 - Use GitHub Remote as Origin
+
+Decision: Use `https://github.com/sergobright/Bright-OS.git` as the `origin` remote for the local Bright OS repository on branch `main`.
+
+Rationale: The linked GitHub repository is the intended source of truth for project code. Pushes require GitHub credentials or SSH access to be configured on the server.

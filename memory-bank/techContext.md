@@ -23,7 +23,9 @@ Project development tooling:
 ## Environment
 
 - Workspace: `/srv/projects/bright-os`
-- Current repository state does not expose a valid Git repository despite a `.git/` directory being present.
+- Local Git is initialized on branch `main`.
+- Remote `origin` is `https://github.com/sergobright/Bright-OS.git`.
+- GitHub push is currently blocked until credentials are configured for Git CLI or SSH on this server.
 - OpenSpec requires Node.js `>=20.19.0`; the current shell has Node.js `v18.19.1`, which can emit engine warnings.
 
 ## Constraints

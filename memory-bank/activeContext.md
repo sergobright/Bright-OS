@@ -6,6 +6,8 @@ OpenSpec has been installed for spec-driven project governance.
 
 ## Recent Changes
 
+- 2026-06-13: Initialized local Git on `main`, configured `origin` as `https://github.com/sergobright/Bright-OS.git`, and created the initial repository commit.
+- 2026-06-13: Attempted to push to GitHub; HTTPS push is blocked by missing non-interactive GitHub credentials, SSH is not configured, and the GitHub connector cannot write repository contents.
 - 2026-06-13: Added SocratiCode as the required semantic code search tool after index readiness is confirmed.
 - 2026-06-13: Created `AGENTS.md` with Memory Bank usage rules and local service notes.
 - 2026-06-13: Created the initial `memory-bank/` documentation set.
@@ -13,6 +15,7 @@ OpenSpec has been installed for spec-driven project governance.
 
 ## Next Steps
 
+- Configure GitHub authentication for pushes from this server, then run `git push -u origin main`.
 - Route planned requirement changes through `openspec/changes/`.
 - Use SocratiCode for semantic code search once its codebase index is complete.
 - Fill in product and technical context once project goals are known.
