@@ -24,8 +24,9 @@ Project development tooling:
 
 - Workspace: `/srv/projects/bright-os`
 - Local Git is initialized on branch `main`.
-- Remote `origin` is `https://github.com/sergobright/Bright-OS.git`.
-- GitHub push is currently blocked until credentials are configured for Git CLI or SSH on this server.
+- Remote `origin` is `git@github.com:sergobright/Bright-OS.git`.
+- Git is configured with `core.sshCommand` to use `/home/mark/.ssh/bright_os_deploy_ed25519`.
+- GitHub push is currently blocked until the generated public deploy key is added to GitHub with write access.
 - OpenSpec requires Node.js `>=20.19.0`; the current shell has Node.js `v18.19.1`, which can emit engine warnings.
 
 ## Constraints

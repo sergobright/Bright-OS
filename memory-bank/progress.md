@@ -3,6 +3,7 @@
 ## Done
 
 - 2026-06-13: Initialized local Git on branch `main`, configured `origin`, and created initial commit `e7b5590`.
+- 2026-06-13: Generated SSH deploy key `/home/mark/.ssh/bright_os_deploy_ed25519` and configured local Git SSH usage for `origin`.
 - 2026-06-13: Added SocratiCode semantic code search rule to `AGENTS.md`, OpenSpec governance, and Memory Bank.
 - 2026-06-13: Installed Memory Bank structure.
 - 2026-06-13: Added agent instructions in `AGENTS.md`.
@@ -13,7 +14,7 @@
 ## In Progress
 
 - Project discovery.
-- GitHub push setup is pending credentials on the server.
+- GitHub push setup is pending adding the generated deploy public key to GitHub with write access.
 
 ## Not Started
 
@@ -28,6 +29,7 @@
 - 2026-06-13: `git push -u origin main` failed because no non-interactive HTTPS credentials are configured for GitHub.
 - 2026-06-13: SSH access to GitHub failed because no private key is configured under `/home/mark/.ssh`.
 - 2026-06-13: GitHub connector reported repository access but contents write failed with `403 Resource not accessible by integration`.
+- 2026-06-13: Generated public deploy key at `/home/mark/.ssh/bright_os_deploy_ed25519.pub`; the private key is not recorded in project files.
 - Confirmed no existing `memory-bank/` directory was present before installation.
 - Confirmed repository currently contains no project source files beyond an empty `README.md` and empty top-level folders.
 - 2026-06-13: `npm run openspec:validate` passed with 3 specs and 0 failures.
