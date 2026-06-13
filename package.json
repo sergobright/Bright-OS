@@ -1,0 +1,15 @@
+{
+  "name": "bright-os",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "openspec": "OPENSPEC_TELEMETRY=0 openspec",
+    "openspec:validate": "OPENSPEC_TELEMETRY=0 openspec validate --all --strict"
+  },
+  "devDependencies": {
+    "@fission-ai/openspec": "1.4.1"
+  }
+}

@@ -1,0 +1,26 @@
+# Active Context
+
+## Current Focus
+
+OpenSpec has been installed for spec-driven project governance.
+
+## Recent Changes
+
+- 2026-06-13: Added SocratiCode as the required semantic code search tool after index readiness is confirmed.
+- 2026-06-13: Created `AGENTS.md` with Memory Bank usage rules and local service notes.
+- 2026-06-13: Created the initial `memory-bank/` documentation set.
+- 2026-06-13: Initialized `openspec/` and added accepted baseline specs for project governance, local services, and repository state.
+
+## Next Steps
+
+- Route planned requirement changes through `openspec/changes/`.
+- Use SocratiCode for semantic code search once its codebase index is complete.
+- Fill in product and technical context once project goals are known.
+- Update `techContext.md` when runtime, dependencies, and commands are established.
+- Update `systemPatterns.md` when architecture or implementation patterns are identified.
+
+## Open Questions
+
+- What is Bright OS intended to do?
+- What stack and runtime should this repository use?
+- What workflows should future agents prioritize?
