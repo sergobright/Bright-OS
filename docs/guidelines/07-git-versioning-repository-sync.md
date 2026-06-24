@@ -16,6 +16,8 @@ Read-only questions, planning, and investigation without project-file changes do
 
 Implementation work that changes project files is not complete until the task branch is pushed, CI/deploy has assigned or reused a preview slot, and the user-facing handoff names the preview letter and URL. If all five preview slots are occupied, the branch is queued for the next released slot; report the queued status and position/source if available, but do not describe the task as complete until a slot letter and URL exist.
 
+After a preview handoff, the project owner saying `Принято`, `принимаю`, `accepted`, or an equivalent acceptance phrase is an acceptance trigger, not a conversational acknowledgement. Negated phrases such as `пока не принято` or `не принято` are not acceptance triggers. Run `deploy/scripts/accept-preview.sh <codex-branch>` immediately, then monitor the GitHub PR/merge queue, `deploy-dev`, and preview-slot release until completion or an explicit blocker/queue state is known. Do not answer with only "принято".
+
 ## Commit And Push
 
 Implementation tasks must finish with a clean tracked working tree.

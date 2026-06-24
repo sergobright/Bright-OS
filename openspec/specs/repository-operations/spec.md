@@ -69,8 +69,17 @@ Ordinary `codex/*` task branch pushes to `origin` and their preview deploys SHAL
 
 #### Scenario: Preview work is accepted
 - **WHEN** the project owner accepts preview work
-- **THEN** it is merged into `dev` before production
+- **THEN** the agent runs `deploy/scripts/accept-preview.sh <codex-branch>` instead of replying with a text-only acknowledgement
+- **AND** the script creates or reuses a GitHub pull request from the preview branch into `dev`
+- **AND** the script enables merge or auto-merge for the exact pushed preview head commit
+- **AND** the agent monitors the GitHub PR, merge queue, `deploy-dev`, metadata promotion, and preview-slot release until completion or an explicit blocker is known
+- **AND** the work is merged into `dev` before production
 - **AND** `dev` is promoted to `main` only after an explicit production release or merge request
+
+#### Scenario: Preview work is not accepted yet
+- **WHEN** the project owner uses a negated acceptance phrase such as "пока не принято" or "не принято"
+- **THEN** the agent does not run the preview acceptance script
+- **AND** the preview branch remains unmerged
 
 ### Requirement: OpenSpec CLI is pinned as project tooling
 The project SHALL pin `@fission-ai/openspec` as development tooling and require the supported Bright OS Node 22 runtime for OpenSpec CLI usage.
