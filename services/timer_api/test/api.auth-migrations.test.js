@@ -121,7 +121,7 @@ test('migration seeds unified build version ledger', async () => {
     const versions = fixture.store.db
       .prepare('SELECT * FROM build_versions ORDER BY version_type_id, version')
       .all();
-    assert.equal(versions.length, 9);
+    assert.equal(versions.length, 10);
 
     const baselineApk = versions.find((version) => version.version_type_id === 'apk' && version.version === '0.0.1.1');
     assert.ok(baselineApk);
@@ -212,12 +212,22 @@ test('migration seeds unified build version ledger', async () => {
     assert.equal(seventhTaskBuild.release_version, 0);
     assert.equal(seventhTaskBuild.build_version, 8);
     assert.equal(seventhTaskBuild.apk_version, 1);
-    assert.equal(seventhTaskBuild.released_at_utc, '2026-06-24T21:05:00Z');
-    assert.match(seventhTaskBuild.detailed_changes, /recheck GitHub CLI authentication outside the sandbox/);
-    assert.equal(seventhTaskBuild.reason, 'Accepted GitHub CLI sandbox auth guidance into dev.');
+    assert.equal(seventhTaskBuild.released_at_utc, '2026-06-24T21:10:59Z');
+    assert.match(seventhTaskBuild.detailed_changes, /desktop rail navigation no longer duplicates the dock/);
+    assert.equal(seventhTaskBuild.reason, 'Accepted split left menu by page into dev.');
+
+    const eighthTaskBuild = versions.find((version) => version.version_type_id === 'build' && version.version === '0.0.9.1');
+    assert.ok(eighthTaskBuild);
+    assert.equal(eighthTaskBuild.major_version, 0);
+    assert.equal(eighthTaskBuild.release_version, 0);
+    assert.equal(eighthTaskBuild.build_version, 9);
+    assert.equal(eighthTaskBuild.apk_version, 1);
+    assert.equal(eighthTaskBuild.released_at_utc, '2026-06-24T21:17:09Z');
+    assert.match(eighthTaskBuild.detailed_changes, /recheck GitHub CLI authentication outside the sandbox/);
+    assert.equal(eighthTaskBuild.reason, 'Accepted GitHub CLI sandbox auth guidance into dev.');
 
     fixture.store.migrate();
-    assert.equal(fixture.store.db.prepare('SELECT COUNT(*) AS count FROM build_versions').get().count, 9);
+    assert.equal(fixture.store.db.prepare('SELECT COUNT(*) AS count FROM build_versions').get().count, 10);
   } finally {
     await fixture.close();
   }
