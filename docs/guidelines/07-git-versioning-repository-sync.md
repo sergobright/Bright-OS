@@ -14,7 +14,7 @@ Before the first project-file change for a task, branch from the latest accepted
 
 Read-only questions, planning, and investigation without project-file changes do not need a branch or preview slot.
 
-Implementation work that changes project files is not complete until the task branch is pushed, CI/deploy has assigned or reused a preview slot, and the user-facing handoff names the preview letter and URL. No preview slot means the task is blocked, not done.
+Implementation work that changes project files is not complete until the task branch is pushed, CI/deploy has assigned or reused a preview slot, and the user-facing handoff names the preview letter and URL. If all five preview slots are occupied, the branch is queued for the next released slot; report the queued status and position/source if available, but do not describe the task as complete until a slot letter and URL exist.
 
 ## Commit And Push
 
@@ -32,7 +32,7 @@ Before commit:
 - do not revert unrelated changes;
 - run or report relevant checks.
 
-If checks fail or an external blocker prevents commit, push, or preview deploy, report the exact branch, tracked status, failing check or deploy step, and next command instead of implying the task is complete.
+If checks fail or an external blocker prevents commit, push, or preview deploy, report the exact branch, tracked status, failing check or deploy step, and next command instead of implying the task is complete. A full preview pool is a queue state, not a failed task; keep monitoring or report the queued state when the current turn cannot wait.
 
 Ignored generated files may remain local. Do not commit runtime data, build output, signing material, local caches, or generated deploy artifacts.
 

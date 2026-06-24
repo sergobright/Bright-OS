@@ -9,4 +9,5 @@
 - [ ] Commit intended changes.
 - [ ] Push the `codex/*` task branch to `origin` unless the task is explicitly local-only/no-push.
 - [ ] Wait for CI/deploy to assign or reuse a preview slot.
-- [ ] End with clean tracked `git status --short` and report preview letter + URL, or report the exact blocker explicitly.
+- [ ] If all preview slots are occupied, report queued status and queue position/source when available.
+- [ ] End with clean tracked `git status --short` and report preview letter + URL, or report queued/blocker status explicitly.

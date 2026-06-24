@@ -54,6 +54,13 @@ Ordinary `codex/*` task branch pushes to `origin` and their preview deploys SHAL
 - **AND** the pushed branch is deployed to a preview slot before user-facing handoff
 - **AND** the handoff names the preview slot letter and URL
 
+#### Scenario: Preview slots are full
+- **WHEN** work changes repository files
+- **AND** all preview slots `A` through `E` are occupied
+- **THEN** the pushed branch is queued for the next released preview slot
+- **AND** the handoff reports the queued state and queue position/source when available
+- **AND** the agent does not describe the task as complete until a preview slot letter and URL exist
+
 #### Scenario: Preview deployment is blocked
 - **WHEN** work changes repository files
 - **AND** the task branch cannot be pushed or deployed to a preview slot
