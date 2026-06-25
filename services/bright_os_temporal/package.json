@@ -1,0 +1,22 @@
+{
+  "name": "@bright-os/bright-os-temporal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "start": "../../scripts/use-node22.sh node src/worker.mjs",
+    "signal": "../../scripts/use-node22.sh node src/client.mjs",
+    "test": "../../scripts/use-node22.sh node --test"
+  },
+  "dependencies": {
+    "@temporalio/client": "^1.13.2",
+    "@temporalio/worker": "^1.13.2",
+    "@temporalio/workflow": "^1.13.2"
+  },
+  "overrides": {
+    "protobufjs": "7.6.4"
+  }
+}

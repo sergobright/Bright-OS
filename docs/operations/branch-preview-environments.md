@@ -26,6 +26,11 @@ codex/* accepted -> accept-preview.sh -> PR/merge queue into dev -> deploy dev -
 dev accepted     -> merge into main -> production release/deploy
 ```
 
+Temporal records this flow as a durable state tracker. See
+[Temporal CI/CD Orchestration](temporal-ci-cd.md). Temporal signals are best-effort in the first phase:
+failed Temporal reporting must not replace or weaken the existing GitHub Actions checks, deploy jobs,
+slot registry, or branch protection rules.
+
 Acceptance trigger:
 
 - If the project owner says `Принято`, `принимаю`, `accepted`, or an equivalent acceptance phrase after a preview handoff, run `deploy/scripts/accept-preview.sh <codex-branch>` immediately. Negated phrases such as `пока не принято` or `не принято` are not acceptance triggers.
