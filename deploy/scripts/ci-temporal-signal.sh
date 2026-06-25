@@ -3,6 +3,8 @@ set -euo pipefail
 
 SERVICE_DIR="services/bright_os_temporal"
 REQUIRED="${BRIGHT_TEMPORAL_REQUIRED:-false}"
+KEY_FILE=""
+TUNNEL_PID=""
 
 finish() {
   local code="$1"
@@ -21,31 +23,29 @@ run() {
   local ssh_port="${BRIGHT_DEPLOY_SSH_PORT:-22}"
   local local_port="${BRIGHT_TEMPORAL_LOCAL_PORT:-7233}"
   local remote_port="${BRIGHT_TEMPORAL_REMOTE_PORT:-7233}"
-  local key_file
-  key_file="$(mktemp "${TMPDIR:-/tmp}/bright-temporal-key.XXXXXX")"
-  local tunnel_pid=""
+  KEY_FILE="$(mktemp "${TMPDIR:-/tmp}/bright-temporal-key.XXXXXX")"
 
   cleanup() {
-    if [[ -n "$tunnel_pid" ]]; then
-      kill "$tunnel_pid" >/dev/null 2>&1 || true
-      wait "$tunnel_pid" >/dev/null 2>&1 || true
+    if [[ -n "${TUNNEL_PID:-}" ]]; then
+      kill "$TUNNEL_PID" >/dev/null 2>&1 || true
+      wait "$TUNNEL_PID" >/dev/null 2>&1 || true
     fi
-    rm -f "$key_file"
+    rm -f "${KEY_FILE:-}"
   }
   trap cleanup EXIT
 
-  printf '%s\n' "$BRIGHT_DEPLOY_SSH_KEY" >"$key_file"
-  chmod 600 "$key_file"
+  printf '%s\n' "$BRIGHT_DEPLOY_SSH_KEY" >"$KEY_FILE"
+  chmod 600 "$KEY_FILE"
 
   ssh \
-    -i "$key_file" \
+    -i "$KEY_FILE" \
     -p "$ssh_port" \
     -N \
     -L "127.0.0.1:${local_port}:127.0.0.1:${remote_port}" \
     -o ExitOnForwardFailure=yes \
     -o StrictHostKeyChecking=accept-new \
     "$BRIGHT_DEPLOY_USER@$BRIGHT_DEPLOY_HOST" &
-  tunnel_pid="$!"
+  TUNNEL_PID="$!"
 
   for _ in {1..25}; do
     if (echo >"/dev/tcp/127.0.0.1/$local_port") >/dev/null 2>&1; then
