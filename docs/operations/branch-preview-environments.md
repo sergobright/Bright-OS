@@ -13,16 +13,24 @@ Read-only questions, planning, investigation without project-file changes, and e
 
 Agents must not reuse an existing unrelated `codex/*` branch just because it is the current checkout. Direct follow-ups may continue the same branch, and explicit project-owner branch instructions override the default.
 
-A pushed `codex/*` branch allocates or reuses a preview slot through `deploy/scripts/preview-slots.sh`, deploys that slot, and reports the slot URL. No push means no slot/deploy.
+A pushed `codex/*` branch allocates or reuses a preview slot through `deploy/scripts/preview-slots.sh`, deploys that slot, and reports the slot URL. If all slots `A` through `E` are occupied, the branch enters the preview queue until a slot is released. No push means no slot/deploy/queue.
 
 Local dev server URLs are agent-only verification aids. The user-facing handoff for project changes is the preview slot URL after `deploy-preview` succeeds; if CI/deploy is not complete, report that blocker instead of asking the project owner to open `localhost` or `127.0.0.1`.
+
+For implementation tasks, the final response must include the preview letter (`A` through `E`), preview URL, branch, and commit. If the preview letter or URL is missing because every slot is occupied, the response must say the branch is queued and include queue position/source when available. If it is missing for any other reason, the response must say exactly which push, CI, or deploy step blocked it. Ordinary `codex/*` branch push/deploy is standing Bright OS CI/CD automation and must not be treated as an optional manual confirmation step.
 
 Preview acceptance flow:
 
 ```text
-codex/* accepted -> merge into dev -> deploy dev -> release preview slot
+codex/* accepted -> accept-preview.sh -> PR/merge queue into dev -> deploy dev -> release preview slot
 dev accepted     -> merge into main -> production release/deploy
 ```
+
+Acceptance trigger:
+
+- If the project owner says `Принято`, `принимаю`, `accepted`, or an equivalent acceptance phrase after a preview handoff, run `deploy/scripts/accept-preview.sh <codex-branch>` immediately. Negated phrases such as `пока не принято` or `не принято` are not acceptance triggers.
+- The script is the single local acceptance entrypoint. It creates or reuses a GitHub PR into `dev` and calls `gh pr merge --merge --auto --match-head-commit <sha>` so branch protection, checks, merge queue, `deploy-dev`, metadata promotion, and preview-slot release stay in GitHub Actions.
+- After starting acceptance, monitor GitHub Actions until `dev` deploy and preview-slot release finish, or report the exact PR/check/merge-queue/deploy blocker.
 
 The development repository default branch should be `dev` once `dev` exists. If `dev` is missing during the first accepted preview, bootstrap it from the latest accepted workflow/source commit, set GitHub default branch to `dev`, then merge the accepted `codex/*` branch into `dev` through a PR so the normal promotion and slot-release jobs run.
 
@@ -44,14 +52,14 @@ Repository secret:
 The deploy user needs write access to `/srv/projects/bright-os-envs/` for CI uploads,
 prod/dev/preview source checkouts, dev/preview web/OTA outputs, SQLite deployment metadata, and preview slot state.
 For production deploys it also needs write access to the existing production web/OTA targets and
-Timer SQLite file:
+Bright OS SQLite file:
 
 ```text
 /srv/projects/bright-os/deploy/web
 /srv/projects/bright-os/deploy/mobile-update
-/srv/projects/bright-os/data/bright_timer.sqlite
-/srv/projects/bright-os/data/bright_timer.sqlite-wal when present
-/srv/projects/bright-os/data/bright_timer.sqlite-shm when present
+/srv/projects/bright-os/data/bright_os.sqlite
+/srv/projects/bright-os/data/bright_os.sqlite-wal when present
+/srv/projects/bright-os/data/bright_os.sqlite-shm when present
 ```
 
 The deploy user must not need read or write access to `/srv/projects/bright-os/.git`. Sudo should be limited to:
@@ -59,13 +67,13 @@ The deploy user must not need read or write access to `/srv/projects/bright-os/.
 ```text
 caddy validate --config /etc/caddy/Caddyfile
 systemctl reload caddy
-systemctl restart brightos-timer-api.service
-systemctl restart brightos-timer-api-dev.service
-systemctl restart brightos-timer-api-preview-a.service
-systemctl restart brightos-timer-api-preview-b.service
-systemctl restart brightos-timer-api-preview-c.service
-systemctl restart brightos-timer-api-preview-d.service
-systemctl restart brightos-timer-api-preview-e.service
+systemctl restart brightos-api.service
+systemctl restart brightos-api-dev.service
+systemctl restart brightos-api-preview-a.service
+systemctl restart brightos-api-preview-b.service
+systemctl restart brightos-api-preview-c.service
+systemctl restart brightos-api-preview-d.service
+systemctl restart brightos-api-preview-e.service
 ```
 
 The Ansible sudoers template is `deploy/ansible/templates/brightos-deploy-sudoers.j2`.
@@ -86,15 +94,15 @@ Apply after check mode passes and secrets/env files exist on the VPS:
 ansible-playbook -i deploy/ansible/inventory.example.ini deploy/ansible/bright-os.yml
 ```
 
-The current local VPS setup keeps the existing production service name `brightos-timer-api.service`.
+The current local VPS setup keeps the existing production service name `brightos-api.service`.
 Prod, dev, and preview services run from the source checkout uploaded into
-`/srv/projects/bright-os-envs/<environment>/source/services/timer_api` as the configured service user/group.
+`/srv/projects/bright-os-envs/<environment>/source/services/bright_os_api` as the configured service user/group.
 The limited `bright-deploy` user owns `/srv/projects/bright-os-envs`, publishes only the deployment
-artifacts above, and uses sudo only for Caddy validation, Caddy reload, and matching Timer API service restarts.
+artifacts above, and uses sudo only for Caddy validation, Caddy reload, and matching Bright OS API service restarts.
 
 Non-production Caddy routes keep the app shell protected with the unified Caddy Basic Auth login, but
-`/mobile-update/*` stays public for Android OTA and `/api/*` is proxied to the matching Timer API without
-Caddy Basic Auth or injected bearer headers. Timer API auth remains responsible for `/v1/*` data access,
+`/mobile-update/*` stays public for Android OTA and `/api/*` is proxied to the matching Bright OS API without
+Caddy Basic Auth or injected bearer headers. Bright OS API auth remains responsible for `/v1/*` data access,
 so newly installed Dev/A-E apps may need their own in-app login session before sync turns green.
 
 If an environment exists before its first CI deploy, publish a baseline web/OTA layer without changing APK
@@ -104,10 +112,10 @@ versions:
 BRIGHT_OS_MIN_APK_VERSION_CODE=1 deploy/scripts/publish-environment-web-layer.sh dev preview-b preview-c preview-d preview-e
 ```
 
-Ansible templates do not store passwords, Caddy auth hashes, deploy keys, Android signing secrets, or Timer API secrets. Per-environment Timer API secret env files live outside source under:
+Ansible templates do not store passwords, Caddy auth hashes, deploy keys, Android signing secrets, or Bright OS API secrets. Per-environment Bright OS API secret env files live outside source under:
 
 ```text
-/srv/projects/bright-os-envs/<environment>/timer-api.env
+/srv/projects/bright-os-envs/<environment>/bright-os-api.env
 ```
 
 ## Public Branch Protection

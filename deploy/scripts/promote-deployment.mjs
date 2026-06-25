@@ -1,33 +1,112 @@
 import process from "node:process";
-import { TimerStore } from "../../services/timer_api/src/store.js";
+import { BrightOsStore } from "../../services/bright_os_api/src/store.js";
 
 const args = parseArgs(process.argv.slice(2));
-const source = new TimerStore(required(args, "source-db"));
-const target = new TimerStore(required(args, "target-db"));
+const source = new BrightOsStore(required(args, "source-db"));
+const target = new BrightOsStore(required(args, "target-db"));
 
 try {
   const sourceBranch = required(args, "source-branch");
+  const targetEnvironment = required(args, "target-environment");
+  const targetBranch = required(args, "target-branch");
+  const targetCommit = required(args, "target-commit");
+  const deployedAtUtc = args["deployed-at"] || new Date().toISOString();
   const sourceRecord = source
     .listDeploymentRecords()
     .find((record) => record.branch === sourceBranch);
   if (!sourceRecord) throw new Error(`no deployment metadata for ${sourceBranch}`);
 
+  if (targetEnvironment === "prod") {
+    promoteBuildVersions(source, target);
+  }
+
   target.recordDeployment({
-    environment: required(args, "target-environment"),
+    environment: targetEnvironment,
     slot: args["target-slot"] || null,
-    branch: required(args, "target-branch"),
-    commit: required(args, "target-commit"),
+    branch: targetBranch,
+    commit: targetCommit,
     domain: required(args, "target-domain"),
     webOtaVersion: args["web-ota-version"] || sourceRecord.web_ota_version,
     apkVersion: args["apk-version"] || sourceRecord.apk_version,
     shortChanges: sourceRecord.short_changes,
     detailedChanges: `Promoted from ${sourceRecord.environment}${sourceRecord.slot ? ` ${sourceRecord.slot}` : ""} (${sourceRecord.branch}@${sourceRecord.commit_sha}). ${sourceRecord.detailed_changes}`,
     reason: args.reason || `Promoted accepted deployment from ${sourceBranch}`,
-    deployedAtUtc: args["deployed-at"] || new Date().toISOString(),
+    deployedAtUtc,
+  });
+  recordAcceptedBuildVersion(target, {
+    prNumber: args["accepted-pr-number"],
+    sourceBranch,
+    sourceCommit: sourceRecord.commit_sha,
+    sourceDetails: sourceRecord.detailed_changes,
+    targetBranch,
+    targetCommit,
+    targetEnvironment,
+    releasedAtUtc: deployedAtUtc,
   });
 } finally {
   source.close();
   target.close();
+}
+
+function promoteBuildVersions(source, target) {
+  const rows = source.db
+    .prepare("SELECT * FROM build_versions WHERE version_type_id = ? ORDER BY build_version")
+    .all("build");
+  const insert = target.db.prepare(`
+    INSERT INTO build_versions (
+      version_type_id,
+      major_version,
+      release_version,
+      build_version,
+      apk_version,
+      version,
+      short_changes,
+      detailed_changes,
+      reason,
+      released_at_utc,
+      created_at_utc
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(version_type_id, version) DO UPDATE SET
+      short_changes = excluded.short_changes,
+      detailed_changes = excluded.detailed_changes,
+      reason = excluded.reason,
+      released_at_utc = excluded.released_at_utc
+  `);
+  const copy = target.db.transaction(() => {
+    for (const row of rows) {
+      insert.run(
+        row.version_type_id,
+        row.major_version,
+        row.release_version,
+        row.build_version,
+        row.apk_version,
+        row.version,
+        row.short_changes,
+        row.detailed_changes,
+        row.reason,
+        row.released_at_utc,
+        row.created_at_utc,
+      );
+    }
+  });
+  copy();
+}
+
+function recordAcceptedBuildVersion(
+  target,
+  { prNumber, sourceBranch, sourceCommit, sourceDetails, targetBranch, targetCommit, targetEnvironment, releasedAtUtc },
+) {
+  if (targetEnvironment !== "dev" || !prNumber) return;
+  target.recordAcceptedBuildVersion({
+    prNumber,
+    sourceBranch,
+    sourceCommit,
+    sourceDetails,
+    targetBranch,
+    targetCommit,
+    releasedAtUtc,
+  });
 }
 
 function parseArgs(values) {

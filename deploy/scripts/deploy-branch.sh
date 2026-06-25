@@ -35,19 +35,19 @@ SERVICE_NAME="${DEPLOY_META[4]}"
 if [[ "$ENVIRONMENT" == "prod" ]]; then
   WEB_TARGET="${BRIGHT_OS_WEB_TARGET:-$ROOT/deploy/web}"
   MOBILE_TARGET="${BRIGHT_OS_MOBILE_TARGET:-$ROOT/deploy/mobile-update}"
-  DB_PATH="${BRIGHT_TIMER_DB:-$ROOT/data/bright_timer.sqlite}"
+  DB_PATH="${BRIGHT_OS_DB:-$ROOT/data/bright_os.sqlite}"
 else
   TARGET_ROOT="${BRIGHT_OS_ENV_ROOT:-$ENVS_ROOT/$ENV_PATH}"
   WEB_TARGET="$TARGET_ROOT/web"
   MOBILE_TARGET="$TARGET_ROOT/mobile-update"
-  DB_PATH="$TARGET_ROOT/data/timer.sqlite"
+  DB_PATH="$TARGET_ROOT/data/bright_os.sqlite"
   mkdir -p "$WEB_TARGET" "$MOBILE_TARGET" "$(dirname "$DB_PATH")"
 fi
 
 if [[ "$ENVIRONMENT" == preview-* && "$ALLOCATED_NEW" == "true" && "${BRIGHT_OS_RESET_NEW_PREVIEW_DB:-true}" != "false" ]]; then
   case "$TARGET_ROOT" in
     "$ENVS_ROOT"/preview-*)
-      rm -f "$TARGET_ROOT/data/timer.sqlite" "$TARGET_ROOT/data/timer.sqlite-shm" "$TARGET_ROOT/data/timer.sqlite-wal"
+      rm -f "$TARGET_ROOT/data/bright_os.sqlite" "$TARGET_ROOT/data/bright_os.sqlite-shm" "$TARGET_ROOT/data/bright_os.sqlite-wal"
       ;;
     *)
       echo "Refusing to reset preview DB outside $ENVS_ROOT/preview-* path: $TARGET_ROOT" >&2
@@ -56,18 +56,73 @@ if [[ "$ENVIRONMENT" == preview-* && "$ALLOCATED_NEW" == "true" && "${BRIGHT_OS_
   esac
 fi
 
-VERSION="${BRIGHT_OS_APP_VERSION:-$("$NODE_BIN" -e '
+if [[ "$ENVIRONMENT" == "dev" && -n "${BRIGHT_OS_ACCEPTED_PR_NUMBER:-}" ]]; then
+  "$NODE_BIN" "$SCRIPT_DIR/record-accepted-build-version.mjs" \
+    --db "$DB_PATH" \
+    --pr-number "$BRIGHT_OS_ACCEPTED_PR_NUMBER" \
+    --source-branch "$BRANCH" \
+    --source-commit "$COMMIT" \
+    --target-branch "$BRANCH" \
+    --target-commit "$COMMIT" \
+    --source-details "Automated dev deployment from accepted PR #$BRIGHT_OS_ACCEPTED_PR_NUMBER." \
+    --released-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+fi
+
+SOURCE_VERSION="$("$NODE_BIN" -e '
 const fs = require("node:fs");
 const path = require("node:path");
 const root = process.argv[1];
 const parsed = JSON.parse(fs.readFileSync(path.join(root, "apps/bright_os_app/public/version.json"), "utf8"));
 console.log(parsed.version);
-' "$ROOT")}"
+' "$ROOT")"
+LEDGER_VERSION=""
+if [[ "$ENVIRONMENT" == "dev" && -z "${BRIGHT_OS_APP_VERSION:-}" ]]; then
+  LEDGER_VERSION="$("$NODE_BIN" -e '
+import { BrightOsStore } from "./services/bright_os_api/src/store.js";
+const store = new BrightOsStore(process.argv[1]);
+try {
+  const row = store.db
+    .prepare("SELECT version FROM build_versions WHERE version_type_id = ? ORDER BY build_version DESC LIMIT 1")
+    .get("build");
+  if (row?.version) console.log(row.version);
+} finally {
+  store.close();
+}
+' "$DB_PATH")"
+fi
+if [[ "$ENVIRONMENT" == "prod" && -z "${BRIGHT_OS_APP_VERSION:-}" && -f "$ENVS_ROOT/dev/data/bright_os.sqlite" ]]; then
+  LEDGER_VERSION="$("$NODE_BIN" -e '
+import { BrightOsStore } from "./services/bright_os_api/src/store.js";
+const store = new BrightOsStore(process.argv[1]);
+try {
+  const row = store.db
+    .prepare("SELECT version FROM build_versions WHERE version_type_id = ? ORDER BY build_version DESC LIMIT 1")
+    .get("build");
+  if (row?.version) console.log(row.version);
+} finally {
+  store.close();
+}
+' "$ENVS_ROOT/dev/data/bright_os.sqlite")"
+fi
+VERSION="${BRIGHT_OS_APP_VERSION:-${LEDGER_VERSION:-$SOURCE_VERSION}}"
+
+if [[ "$ENVIRONMENT" == preview-* && -z "${BRIGHT_OS_APP_VERSION:-}" && -f "$ENVS_ROOT/dev/web/version.json" ]]; then
+  VERSION="$("$NODE_BIN" -e '
+const fs = require("node:fs");
+const parsed = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+console.log(parsed.version);
+' "$ENVS_ROOT/dev/web/version.json")"
+fi
 
 if [[ "$ENVIRONMENT" == "prod" ]]; then
   BUNDLE_VERSION="${BRIGHT_OS_MOBILE_BUNDLE_VERSION:-$VERSION}"
 else
   BUNDLE_VERSION="${BRIGHT_OS_MOBILE_BUNDLE_VERSION:-$VERSION.$RUN_ID}"
+fi
+
+ANDROID_API="https://$DOMAIN/api"
+if [[ "$ENVIRONMENT" == "prod" ]]; then
+  ANDROID_API="https://api.brightos.world"
 fi
 
 export BRIGHT_OS_ROOT="$ROOT"
@@ -76,13 +131,14 @@ export BRIGHT_OS_MOBILE_TARGET="$MOBILE_TARGET"
 export BRIGHT_OS_UPDATE_BASE_URL="https://$DOMAIN/mobile-update"
 export BRIGHT_OS_APP_VERSION="$VERSION"
 export BRIGHT_OS_MOBILE_BUNDLE_VERSION="$BUNDLE_VERSION"
+export NEXT_PUBLIC_BRIGHT_OS_APP_VERSION="$VERSION"
 export NEXT_PUBLIC_BRIGHT_OS_ENVIRONMENT="$ENVIRONMENT"
 export NEXT_PUBLIC_BRIGHT_OS_PREVIEW_SLOT="$SLOT"
 export NEXT_PUBLIC_BRIGHT_OS_BRANCH="$BRANCH"
 export NEXT_PUBLIC_BRIGHT_OS_COMMIT="$COMMIT"
 export NEXT_PUBLIC_BRIGHT_OS_OTA_CHANNEL="$DOMAIN/mobile-update"
-export NEXT_PUBLIC_BRIGHT_TIMER_API="/api"
-export NEXT_PUBLIC_BRIGHT_TIMER_ANDROID_API="https://$DOMAIN/api"
+export NEXT_PUBLIC_BRIGHT_OS_API="/api"
+export NEXT_PUBLIC_BRIGHT_OS_ANDROID_API="$ANDROID_API"
 
 "$SCRIPT_DIR/publish-client-web-layer.sh"
 

@@ -11,17 +11,17 @@ Bright OS SHALL publish the built Next.js web output to the existing `deploy/web
 - **THEN** `deploy/scripts/publish-web.sh` copies or synchronizes from the Next.js static output
 - **AND** removed files are not left behind in `deploy/web`
 
-#### Scenario: Web app calls the Timer API
-- **WHEN** the deployed web app calls Timer API endpoints
+#### Scenario: Web app calls the Bright OS API
+- **WHEN** the deployed web app calls Bright OS API endpoints
 - **THEN** it uses same-origin `/api/*` URLs
-- **AND** the browser bundle does not include the Timer API Bearer token
+- **AND** the browser bundle does not include the Bright OS API Bearer token
 
 ### Requirement: Caddy route boundaries are preserved
 Bright OS SHALL preserve the existing Caddy route boundaries for web, API proxy, direct API access, and protected releases.
 
 #### Scenario: Web app is deployed
 - **WHEN** `app.brightos.world` serves the migrated web app
-- **THEN** `/api/*` remains routed to the Timer API before the web catch-all
+- **THEN** `/api/*` remains routed to the Bright OS API before the web catch-all
 - **AND** `/releases*` remains routed to the release/auth flow before the web catch-all
 - **AND** application service ports remain localhost-only
 
@@ -107,11 +107,23 @@ Bright OS SHALL publish a release APK whenever a change crosses the native Andro
 ### Requirement: Release versions use one build ledger
 Bright OS SHALL track public release versions in the server SQLite `build_versions` table with type metadata from `version_types`.
 
-#### Scenario: Ordinary release is prepared
-- **WHEN** the project owner asks to make a release without explicitly changing the versioning rules
+#### Scenario: Task branch is prepared
+- **WHEN** a `codex/*` task branch is created or updated before acceptance
+- **THEN** it does not write a `build_versions` row by itself
+- **AND** defers the version ledger row until the task is accepted into `dev`
+
+#### Scenario: Accepted task lands in dev
+- **WHEN** a `codex/*` task branch is accepted and merged into `dev`
 - **THEN** the workflow increments only `Z` in `X.Y.Z.S`
 - **AND** keeps `X`, `Y`, and `S` unchanged
 - **AND** writes one `build_versions` row with all four numeric fields, the full version string, short changes, detailed changes, release time, reason, and `version_type_id = build`
+
+#### Scenario: Dev is promoted to main
+- **WHEN** `dev` is accepted and merged into `main`
+- **THEN** the workflow increments only `Y` in `X.Y.Z.S`
+- **AND** keeps `X`, `Z`, and `S` unchanged
+- **AND** writes one `build_versions` row with all four numeric fields, the full version string, short changes, detailed changes, release time, reason, and `version_type_id = build`
+- **AND** preserves the accepted task index, for example `0.0.10.1` becomes `0.1.10.1`
 
 #### Scenario: APK release is prepared
 - **WHEN** the project owner asks to make or publish an APK release

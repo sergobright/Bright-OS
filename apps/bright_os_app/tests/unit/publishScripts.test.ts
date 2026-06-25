@@ -45,6 +45,11 @@ describe("mobile OTA publish scripts", () => {
     await expect(
       readFile(path.join(root, "deploy/mobile-update/bundles", bundleVersion, "bundle.zip")),
     ).resolves.toBeInstanceOf(Buffer);
+    const webVersion = JSON.parse(await readFile(path.join(root, "deploy/web/version.json"), "utf8"));
+    expect(webVersion).toMatchObject({
+      version: "9.9.9.99",
+      versionParts: { major: 9, release: 9, build: 9, apk: 99 },
+    });
     expect(manifest.bundleVersion).toBe(bundleVersion);
   });
 
@@ -107,6 +112,7 @@ describe("mobile OTA publish scripts", () => {
     const template = await readFile(path.join(workspaceRoot, "deploy/ansible/templates/Caddyfile.j2"), "utf8");
     const apiBlock = template.slice(template.indexOf("handle_path /api/*"), template.indexOf("handle /releases*"));
     const mobileIndex = template.indexOf("handle_path /mobile-update/*");
+    const mobileBlock = template.slice(mobileIndex, template.indexOf("handle {"));
     const webShellBlock = template.slice(template.indexOf("handle {"), template.indexOf("try_files"));
 
     expect(template).not.toMatch(/\{\{ env\.domain \}\} \{\n\s+\{\{ bright_os_basic_auth_directive \}\}/);
@@ -114,12 +120,23 @@ describe("mobile OTA publish scripts", () => {
     expect(apiBlock).not.toContain("header_up Authorization");
     expect(mobileIndex).toBeGreaterThan(template.indexOf("handle /releases*"));
     expect(mobileIndex).toBeLessThan(template.indexOf("handle {"));
+    expect(mobileBlock).toContain('header /manifest.json Cache-Control "no-store"');
     expect(webShellBlock).toContain("bright_os_basic_auth_directive");
+  });
+
+  it("uses the public API endpoint for production Android bundles", async () => {
+    const deployBranch = await readFile(path.join(workspaceRoot, "deploy/scripts/deploy-branch.sh"), "utf8");
+    const buildApk = await readFile(path.join(workspaceRoot, "deploy/scripts/build-android-env-apk.sh"), "utf8");
+
+    expect(deployBranch).toContain('ANDROID_API="https://api.brightos.world"');
+    expect(deployBranch).toContain('export NEXT_PUBLIC_BRIGHT_OS_ANDROID_API="$ANDROID_API"');
+    expect(buildApk).toContain('ANDROID_API="https://api.brightos.world"');
+    expect(buildApk).toContain('export NEXT_PUBLIC_BRIGHT_OS_ANDROID_API="$ANDROID_API"');
   });
 
   it("promotes production deployment metadata into the production database path", async () => {
     const script = await readFile(path.join(workspaceRoot, "deploy/scripts/ci-ssh-promote-deployment.sh"), "utf8");
-    expect(script).toContain('export BRIGHT_TIMER_DB="$DEPLOY_REPO/data/bright_timer.sqlite"');
+    expect(script).toContain('export BRIGHT_OS_DB="$DEPLOY_REPO/data/bright_os.sqlite"');
   });
 
   it("publishes a versioned bundle and atomic manifest from a static export", async () => {
@@ -130,7 +147,6 @@ describe("mobile OTA publish scripts", () => {
       env: {
         ...process.env,
         BRIGHT_OS_ROOT: root,
-        BRIGHT_OS_APP_VERSION: "9.9.9.99",
         BRIGHT_OS_MIN_APK_VERSION_CODE: "2999",
         BRIGHT_OS_PUBLISHED_AT: "2026-06-15T00:00:00Z",
       },
@@ -154,6 +170,30 @@ describe("mobile OTA publish scripts", () => {
     });
     expect(manifest.sizeBytes).toBe((await stat(archivePath)).size);
     expect(manifest.sha256).toBe(createHash("sha256").update(archive).digest("hex"));
+  });
+
+  it("publishes an APK using app version metadata when env version is unset", async () => {
+    const root = await fixtureRoot("bright-apk-publish-");
+    await writeStaticExport(root, "apk");
+    await mkdir(path.join(root, "deploy"), { recursive: true });
+    await copyFile(
+      path.join(workspaceRoot, "deploy/environments.json"),
+      path.join(root, "deploy/environments.json"),
+    );
+    const apkPath = path.join(root, "app-release.apk");
+    await writeFile(apkPath, "apk");
+
+    await execFileAsync("bash", [path.join(workspaceRoot, "deploy/scripts/publish-capacitor-apk.sh")], {
+      env: {
+        ...process.env,
+        BRIGHT_OS_ROOT: root,
+        BRIGHT_OS_APK_SOURCE: apkPath,
+        BRIGHT_OS_ANDROID_VERSION_CODE: "2999",
+        BRIGHT_OS_PUBLISHED_AT: "2026-06-15T00:00:00Z",
+      },
+    });
+
+    await expect(readFile(path.join(root, "deploy/releases/bright-os-9.9.9.99-capacitor.apk"), "utf8")).resolves.toBe("apk");
   });
 
   it("replaces an existing OTA bundle instead of rewriting it in place", async () => {
@@ -229,6 +269,40 @@ describe("mobile OTA publish scripts", () => {
     await expect(readFile(path.join(envsRoot, "preview-status/index.html"), "utf8")).resolves.toContain("Bright OS Preview Slots");
   });
 
+  it("queues preview branches when every slot is occupied", async () => {
+    const root = await fixtureRoot("bright-slots-queue-");
+    const envsRoot = path.join(root, "envs");
+    const env = {
+      ...process.env,
+      BRIGHT_OS_ROOT: workspaceRoot,
+      BRIGHT_OS_ENVS_ROOT: envsRoot,
+    };
+    const slotScript = path.join(workspaceRoot, "deploy/scripts/preview-slots.mjs");
+
+    for (const branch of ["codex/one", "codex/two", "codex/three", "codex/four", "codex/five"]) {
+      await execFileAsync("node", [slotScript, "allocate", branch, branch.split("/")[1]], { env });
+    }
+
+    await execFileAsync("node", [slotScript, "allocate", "codex/six", "006"], { env });
+    let registry = JSON.parse(await readFile(path.join(envsRoot, "preview-slots.json"), "utf8"));
+    expect(registry.queue.map((entry: { branch: string }) => entry.branch)).toEqual(["codex/six"]);
+
+    await execFileAsync("node", [slotScript, "release", "codex/one"], { env });
+    await execFileAsync("node", [slotScript, "allocate", "codex/seven", "007"], { env });
+    registry = JSON.parse(await readFile(path.join(envsRoot, "preview-slots.json"), "utf8"));
+    expect(registry.queue.map((entry: { branch: string }) => entry.branch)).toEqual(["codex/six", "codex/seven"]);
+
+    await execFileAsync("node", [slotScript, "allocate", "codex/six", "006"], { env });
+
+    registry = JSON.parse(await readFile(path.join(envsRoot, "preview-slots.json"), "utf8"));
+    expect(registry.A.branch).toBe("codex/six");
+    expect(registry.queue.map((entry: { branch: string }) => entry.branch)).toEqual(["codex/seven"]);
+
+    await execFileAsync("node", [slotScript, "dequeue", "codex/seven"], { env });
+    registry = JSON.parse(await readFile(path.join(envsRoot, "preview-slots.json"), "utf8"));
+    expect(registry.queue).toEqual([]);
+  });
+
   it("renders exactly seven APK release sections without stale missing links", async () => {
     const root = await fixtureRoot("bright-release-page-");
     const releaseDir = path.join(root, "deploy/releases");
@@ -260,7 +334,9 @@ async function fixtureRoot(prefix: string) {
 async function writeStaticExport(root: string, marker: string) {
   const out = path.join(root, "apps/bright_os_app/out");
   await mkdir(path.join(out, "_next"), { recursive: true });
+  await mkdir(path.join(root, "apps/bright_os_app/public"), { recursive: true });
   await writeFile(path.join(out, "index.html"), `<main>${marker}</main>`);
   await writeFile(path.join(out, "_next/app.js"), "console.log('ok')");
   await writeFile(path.join(out, "version.json"), JSON.stringify({ marker }));
+  await writeFile(path.join(root, "apps/bright_os_app/public/version.json"), JSON.stringify({ version: "9.9.9.99" }));
 }
