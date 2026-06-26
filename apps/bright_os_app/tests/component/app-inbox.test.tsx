@@ -39,6 +39,7 @@ describe("BrightOsApp inbox", () => {
 
     fireEvent.click(title);
     await waitFor(() => expect(screen.getByRole("button", { name: "Закрыть редактор" })).toBeInTheDocument());
+    expect(screen.getByLabelText("Редактирование входящего")).toHaveClass("pr-7");
     const divider = document.querySelector("[data-inbox-split-divider]") as HTMLElement | null;
     expect(divider).toBeInTheDocument();
     expect(divider?.style.left).toBe("50%");
@@ -49,6 +50,7 @@ describe("BrightOsApp inbox", () => {
     fireEvent.click(screen.getByRole("button", { name: "Читать описание" }));
     await waitFor(() => expect(screen.getByLabelText("MD просмотр описания входящего")).toHaveTextContent("Контекст"));
     fireEvent.click(screen.getByRole("button", { name: "Закрыть редактор" }));
+    await waitFor(() => expect(screen.getByRole("status", { name: "сбой" })).toBeInTheDocument());
 
     await waitFor(async () => {
       expect(await pendingInboxEvents()).toEqual(

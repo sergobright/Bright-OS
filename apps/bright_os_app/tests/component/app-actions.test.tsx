@@ -121,6 +121,7 @@ describe("BrightOsApp actions", () => {
     await waitFor(() => expect(screen.getByText("Детальное действие")).toBeInTheDocument());
     fireEvent.click(screen.getByRole("textbox", { name: "Название действия: Детальное действие" }));
     expect(screen.getByRole("button", { name: "Закрыть редактор" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Редактирование действия")).toHaveClass("pr-7");
     const detailTitle = screen.getByRole("textbox", { name: "Название действия" });
     expect(detailTitle).toHaveClass("whitespace-pre-wrap");
     expect(detailTitle).toHaveClass("overflow-hidden");
