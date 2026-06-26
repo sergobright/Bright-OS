@@ -503,7 +503,7 @@ function InboxRow({
         deleteOpen && "delete-open",
         dragging && "dragging",
         removing && "removing pointer-events-none max-h-0 border-b-transparent opacity-0",
-        selected && "selected rounded-lg bg-primary/10",
+        selected && "selected -mt-px rounded-lg border-b-transparent bg-primary/10",
       )}
       data-nav-swipe-exclusion
       data-action-row
