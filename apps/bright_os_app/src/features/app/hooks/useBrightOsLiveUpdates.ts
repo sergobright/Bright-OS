@@ -3,7 +3,7 @@
 import { useEffect, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import { BrightOsApi } from "@/shared/api/brightOsApi";
 import { tickTimerState } from "@/shared/time/format";
-import type { ActivitiesState } from "@/shared/types/activities";
+import type { ActionsState } from "@/shared/types/activities";
 import type { SyncStatus, TimerState } from "@/shared/types/timer";
 
 type LiveUpdateOptions = {
@@ -12,7 +12,7 @@ type LiveUpdateOptions = {
   setTimer: Dispatch<SetStateAction<TimerState>>;
   refreshStateAndFlushRef: MutableRefObject<() => Promise<void>>;
   applyServerStateRef: MutableRefObject<(state: TimerState) => Promise<void>>;
-  applyActivitiesStateRef: MutableRefObject<(state: ActivitiesState) => Promise<void>>;
+  applyActivitiesStateRef: MutableRefObject<(state: ActionsState) => Promise<void>>;
 };
 
 /**
@@ -68,8 +68,8 @@ export function useBrightOsLiveUpdates({
           activities_state?: {
             server_time_utc: string;
             server_revision: number;
-            activities: ActivitiesState["actions"];
-            archived_activities?: ActivitiesState["archived_actions"];
+            activities: ActionsState["actions"];
+            archived_activities?: ActionsState["archived_actions"];
           };
         };
         if (payload.state) void applyServerStateRef.current(payload.state);

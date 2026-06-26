@@ -4,13 +4,13 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { BrightOsApi } from "@/shared/api/brightOsApi";
 import { defaultApiBase } from "@/shared/config/runtime";
 import { consumeAndroidTimerStopRequest, startAndroidTimerNotification, stopAndroidTimerNotification } from "@/shared/platform/androidTimerNotification";
-import { acknowledgeActivityEvents, loadActivitiesState, markActivityAttempt, markActivityFailure, pendingActivityEvents, projectActivitiesState, saveActivitiesState } from "@/shared/storage/activityStore";
+import { acknowledgeActionEvents, loadActionsState, markActionAttempt, markActionFailure, pendingActionEvents, projectActionsState, saveActionsState } from "@/shared/storage/activityStore";
 import { ensureClientMeta } from "@/shared/storage/db";
 import { projectHistoryData, projectTimerState } from "@/shared/storage/projection";
 import { acknowledgeEvents, enqueueFocusSessionEdit, enqueueTimerEvent, loadCanonicalState, loadGoalCache, loadHistoryCache, markAttempt, markFailure, pendingEvents, saveCanonicalState, saveGoalCache, saveHistoryCache, saveIgnoredEvents } from "@/shared/storage/syncStore";
 import { tickTimerState } from "@/shared/time/format";
-import type { ActivitiesState } from "@/shared/types/activities";
-import { emptyActivitiesState } from "@/shared/types/activities";
+import type { ActionsState } from "@/shared/types/activities";
+import { emptyActionsState } from "@/shared/types/activities";
 import type { GoalData, HistoryData, SyncStatus, TimerState } from "@/shared/types/timer";
 import { emptyGoal, emptyHistory, emptyTimerState } from "@/shared/types/timer";
 import type { FocusBackgroundMode, FocusContextPanel, MobileContextPanel, SectionId } from "../appModel";
@@ -37,7 +37,7 @@ export function useBrightOsAppState(initialSection: SectionId) {
   const refreshAllRef = useRef<(sourceApi?: BrightOsApi) => Promise<void>>(async () => undefined);
   const refreshStateAndFlushRef = useRef<() => Promise<void>>(async () => undefined);
   const applyServerStateRef = useRef<(state: TimerState) => Promise<void>>(async () => undefined);
-  const applyActivitiesStateRef = useRef<(state: ActivitiesState) => Promise<void>>(async () => undefined);
+  const applyActivitiesStateRef = useRef<(state: ActionsState) => Promise<void>>(async () => undefined);
   const timerRevisionRef = useRef(0);
   const actionsRevisionRef = useRef(0);
   const historyGoalRevisionRef = useRef(0);
@@ -45,7 +45,7 @@ export function useBrightOsAppState(initialSection: SectionId) {
   const androidStopInFlightRef = useRef(false);
   const stopTimerRef = useRef<() => Promise<void>>(async () => undefined);
   const [timer, setTimer] = useState<TimerState>(() => emptyTimerState());
-  const [actions, setActions] = useState<ActivitiesState>(() => emptyActivitiesState());
+  const [actions, setActions] = useState<ActionsState>(() => emptyActionsState());
   const [history, setHistory] = useState<HistoryData>(() => emptyHistory());
   const [goal, setGoal] = useState<GoalData>(() => emptyGoal());
   const [localSnapshotReady, setLocalSnapshotReady] = useState(false);
@@ -68,7 +68,7 @@ export function useBrightOsAppState(initialSection: SectionId) {
     setTimer((current) => (current.server_revision > nextState.server_revision ? current : nextState));
   }
 
-  function setActionsSnapshot(nextState: ActivitiesState) {
+  function setActionsSnapshot(nextState: ActionsState) {
     setActions((current) => (current.server_revision > nextState.server_revision ? current : nextState));
   }
 
@@ -93,17 +93,17 @@ export function useBrightOsAppState(initialSection: SectionId) {
     }
   }
 
-  async function applyActivitiesState(state: ActivitiesState) {
-    const queued = await pendingActivityEvents();
+  async function applyActivitiesState(state: ActionsState) {
+    const queued = await pendingActionEvents();
     if (queued.length > 0) {
       await flushActionPending();
       return;
     }
     if (state.server_revision < actionsRevisionRef.current) return;
     actionsRevisionRef.current = state.server_revision;
-    const accepted = await saveActivitiesState(state);
+    const accepted = await saveActionsState(state);
     if (!accepted) return;
-    setActionsSnapshot(projectActivitiesState(state, []));
+    setActionsSnapshot(projectActionsState(state, []));
     setActionPendingCount(0);
     setSyncStatus("synced");
   }
@@ -126,9 +126,9 @@ export function useBrightOsAppState(initialSection: SectionId) {
         sourceApi.state(),
         sourceApi.history(),
         sourceApi.goal(),
-        sourceApi.activities(),
+        sourceApi.actions(),
       ]);
-      const [queued, queuedActions] = await Promise.all([pendingEvents(), pendingActivityEvents()]);
+      const [queued, queuedActions] = await Promise.all([pendingEvents(), pendingActionEvents()]);
       const accepted =
         nextState.server_revision >= timerRevisionRef.current && (await saveCanonicalState(nextState));
       if (accepted) {
@@ -144,10 +144,10 @@ export function useBrightOsAppState(initialSection: SectionId) {
         setGoal(nextGoal);
       }
       const actionsAccepted =
-        nextActions.server_revision >= actionsRevisionRef.current && (await saveActivitiesState(nextActions));
+        nextActions.server_revision >= actionsRevisionRef.current && (await saveActionsState(nextActions));
       if (actionsAccepted) {
         actionsRevisionRef.current = nextActions.server_revision;
-        setActionsSnapshot(projectActivitiesState(nextActions, queuedActions));
+        setActionsSnapshot(projectActionsState(nextActions, queuedActions));
       }
       setPendingCount(queued.length);
       setActionPendingCount(queuedActions.length);
@@ -218,13 +218,13 @@ export function useBrightOsAppState(initialSection: SectionId) {
 
   async function refreshActionsAndFlush(sourceApi = apiRef.current) {
     try {
-      const nextActions = await sourceApi.activities();
-      const queuedActions = await pendingActivityEvents();
+      const nextActions = await sourceApi.actions();
+      const queuedActions = await pendingActionEvents();
       const accepted =
-        nextActions.server_revision >= actionsRevisionRef.current && (await saveActivitiesState(nextActions));
+        nextActions.server_revision >= actionsRevisionRef.current && (await saveActionsState(nextActions));
       if (accepted) {
         actionsRevisionRef.current = nextActions.server_revision;
-        setActionsSnapshot(projectActivitiesState(nextActions, queuedActions));
+        setActionsSnapshot(projectActionsState(nextActions, queuedActions));
       }
       setActionPendingCount(queuedActions.length);
       await flushActionPending(sourceApi);
@@ -234,7 +234,7 @@ export function useBrightOsAppState(initialSection: SectionId) {
   }
 
   async function flushActionPending(sourceApi = apiRef.current) {
-    const queued = await pendingActivityEvents();
+    const queued = await pendingActionEvents();
     setActionPendingCount(queued.length);
     if (queued.length === 0) {
       if ((await pendingEvents()).length === 0) setSyncStatus("synced");
@@ -242,31 +242,31 @@ export function useBrightOsAppState(initialSection: SectionId) {
     }
 
     setSyncStatus("pending_sync");
-    await markActivityAttempt(queued);
+    await markActionAttempt(queued);
     try {
       const meta = await ensureClientMeta();
-      const response = await sourceApi.syncActivityEvents({
+      const response = await sourceApi.syncActionEvents({
         deviceId: meta.deviceId,
         platform: meta.platform,
         events: queued,
         lastKnownServerTimeUtc: actions.server_time_utc,
       });
       const ignoredIds = response.ignored_events.map((event) => event.event_id);
-      await acknowledgeActivityEvents([...response.acknowledged_event_ids, ...ignoredIds]);
+      await acknowledgeActionEvents([...response.acknowledged_event_ids, ...ignoredIds]);
       await saveIgnoredEvents(response.ignored_events);
       const accepted =
-        response.state.server_revision >= actionsRevisionRef.current && (await saveActivitiesState(response.state));
-      const remaining = await pendingActivityEvents();
-      const currentState = accepted ? response.state : (await loadActivitiesState()) ?? response.state;
+        response.state.server_revision >= actionsRevisionRef.current && (await saveActionsState(response.state));
+      const remaining = await pendingActionEvents();
+      const currentState = accepted ? response.state : (await loadActionsState()) ?? response.state;
       if (currentState.server_revision >= actionsRevisionRef.current) {
         actionsRevisionRef.current = currentState.server_revision;
-        setActionsSnapshot(projectActivitiesState(currentState, remaining));
+        setActionsSnapshot(projectActionsState(currentState, remaining));
       }
       setActionPendingCount(remaining.length);
       const timerQueued = await pendingEvents();
       setSyncStatus(remaining.length + timerQueued.length > 0 ? "pending_sync" : "synced");
     } catch (error) {
-      await markActivityFailure(queued, error instanceof Error ? error.message : "sync_failed");
+      await markActionFailure(queued, error instanceof Error ? error.message : "sync_failed");
       handleError(error);
     }
   }
@@ -374,9 +374,9 @@ export function useBrightOsAppState(initialSection: SectionId) {
         loadCanonicalState(),
         loadHistoryCache(),
         loadGoalCache(),
-        loadActivitiesState(),
+        loadActionsState(),
         pendingEvents(),
-        pendingActivityEvents(),
+        pendingActionEvents(),
       ]);
       const resolvedApiBase = defaultApiBase();
 
@@ -391,7 +391,7 @@ export function useBrightOsAppState(initialSection: SectionId) {
       if (cachedHistory.sessions.length > 0) setHistory(projectHistoryData(cachedHistory, queued));
       if (cachedGoal) setGoal(cachedGoal);
       if (cachedActions) actionsRevisionRef.current = cachedActions.server_revision;
-      setActionsSnapshot(projectActivitiesState(cachedActions, queuedActions));
+      setActionsSnapshot(projectActionsState(cachedActions, queuedActions));
       setLocalSnapshotReady(true);
       await refreshAllRef.current(new BrightOsApi(resolvedApiBase));
     }
