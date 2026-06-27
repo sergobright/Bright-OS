@@ -4,6 +4,7 @@ set -euo pipefail
 BASE_BRANCH="${BRIGHT_OS_ACCEPT_BASE:-dev}"
 BRANCH="${1:-}"
 INFRA_DOCS_LABEL="bright-delivery:infra-docs"
+MERGE_METHOD="${BRIGHT_OS_ACCEPT_MERGE_METHOD:-squash}"
 
 usage() {
   cat <<'USAGE'
@@ -27,6 +28,14 @@ if [[ "$BRANCH" != codex/* ]]; then
   echo "Acceptance requires a codex/* preview branch, got: ${BRANCH:-<empty>}" >&2
   exit 1
 fi
+
+case "$MERGE_METHOD" in
+  merge | squash | rebase) ;;
+  *)
+    echo "Unsupported merge method: $MERGE_METHOD" >&2
+    exit 1
+    ;;
+esac
 
 if ! command -v gh >/dev/null 2>&1; then
   echo "GitHub CLI is required: gh" >&2
@@ -133,8 +142,9 @@ if [[ "$PR_HEAD" != "$HEAD_SHA" ]]; then
   exit 1
 fi
 
-gh pr merge "$PR_NUMBER" --merge --auto --match-head-commit "$HEAD_SHA"
+gh pr merge "$PR_NUMBER" "--$MERGE_METHOD" --auto --match-head-commit "$HEAD_SHA"
 
 echo "Acceptance started for $BRANCH -> $BASE_BRANCH"
 echo "PR: $PR_URL"
 echo "Head: $HEAD_SHA"
+echo "Merge method: $MERGE_METHOD"
