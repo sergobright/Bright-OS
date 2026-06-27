@@ -10,6 +10,12 @@ const token = process.env.BRIGHT_OS_TOKEN;
 const webPassword = process.env.BRIGHT_OS_WEB_PASSWORD;
 const releasePassword = process.env.BRIGHT_OS_RELEASE_PASSWORD ?? webPassword;
 const sessionSecret = process.env.BRIGHT_OS_SESSION_SECRET;
+const inboundToken = process.env.BRIGHT_OS_INBOUND_TOKEN;
+const inboundStorageRoot =
+  process.env.BRIGHT_OS_INBOUND_STORAGE_ROOT ?? path.join(path.dirname(dbPath), 'inbox-attachments');
+const codexBin = process.env.BRIGHT_OS_CODEX_BIN ?? 'codex';
+const parsedCodexTimeoutMs = Number(process.env.BRIGHT_OS_CODEX_TIMEOUT_MS ?? 3000);
+const codexTimeoutMs = Number.isFinite(parsedCodexTimeoutMs) ? parsedCodexTimeoutMs : 3000;
 const releaseDir =
   process.env.BRIGHT_OS_RELEASE_DIR ?? path.resolve(serviceRoot, '..', '..', 'deploy', 'releases');
 
@@ -28,7 +34,18 @@ if (!sessionSecret) {
   process.exit(1);
 }
 
-const runtime = createBrightOsServer({ dbPath, token, webPassword, releasePassword, sessionSecret, releaseDir });
+const runtime = createBrightOsServer({
+  dbPath,
+  token,
+  webPassword,
+  releasePassword,
+  sessionSecret,
+  releaseDir,
+  inboundToken,
+  inboundStorageRoot,
+  codexBin,
+  codexTimeoutMs
+});
 runtime.server.listen(port, '127.0.0.1', () => {
   console.log(`Bright OS API listening on 127.0.0.1:${port}`);
 });

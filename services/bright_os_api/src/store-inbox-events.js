@@ -4,6 +4,7 @@ import {
   INBOX_EVENT_TYPES,
   formatInboxItem,
   normalizeMarkdownSource,
+  parseJsonArray,
   parseJsonObject,
   sanitizeText
 } from './store-helpers.js';
@@ -28,6 +29,51 @@ export const inboxEventMethods = {
       .prepare('SELECT COALESCE(MAX(server_sequence), 0) AS revision FROM inbox_events')
       .get();
     return row.revision;
+  }
+,
+
+  inboxIdForEvent(eventId) {
+    const id = sanitizeText(eventId);
+    if (!id) return null;
+    return this.db
+      .prepare('SELECT inbox_id FROM inbox_events WHERE event_id = ?')
+      .get(id)?.inbox_id ?? null;
+  }
+,
+
+  createInboundInboxItem({ eventId, inboxId, title, explanationText, attachmentLinks, source, nowIso }) {
+    const receivedAt = nowIso ?? new Date().toISOString();
+    const deviceId = 'inbound-api';
+
+    const run = this.db.transaction(() => {
+      this.upsertDevice(
+        {
+          device_id: deviceId,
+          platform: 'server',
+          display_name: 'Inbound API'
+        },
+        receivedAt,
+        { lastSyncAtUtc: receivedAt, lastServerClockOffsetMs: 0 }
+      );
+
+      const result = this.ingestInboxEvent(deviceId, {
+        event_id: eventId,
+        client_sequence: this.nextInboxClientSequence(deviceId),
+        type: 'create',
+        inbox_id: inboxId,
+        occurred_at_utc: receivedAt,
+        payload: {
+          title,
+          explanation_text: explanationText,
+          attachment_links: attachmentLinks,
+          source
+        }
+      }, receivedAt);
+
+      if (result.accepted_event) this.projectAcceptedInboxEvents([result.accepted_event], receivedAt);
+      return result;
+    });
+    return run();
   }
 ,
 
@@ -252,6 +298,14 @@ export const inboxEventMethods = {
   }
 ,
 
+  nextInboxClientSequence(deviceId) {
+    const row = this.db
+      .prepare('SELECT COALESCE(MAX(client_sequence), 0) + 1 AS next FROM inbox_events WHERE device_id = ?')
+      .get(deviceId);
+    return row.next;
+  }
+,
+
   projectAcceptedInboxEvents(events, nowIso) {
     const inboxIds = new Set(events.map((event) => event.inbox_id).filter(Boolean));
     for (const inboxId of inboxIds) this.projectInboxItem(inboxId, nowIso);
@@ -282,13 +336,18 @@ export const inboxEventMethods = {
           id: inboxId,
           title,
           description_text: normalizeMarkdownSource(payload.description_md ?? item?.description_text ?? ''),
-          source: item?.source ?? '',
+          source: sanitizeText(payload.source) ?? item?.source ?? '',
           item_date: item?.item_date ?? null,
           author: item?.author ?? '',
           preliminary_section: item?.preliminary_section ?? '',
           urgency: item?.urgency ?? '',
-          attachment_links_json: item?.attachment_links_json ?? '[]',
-          explanation_text: item?.explanation_text ?? '',
+          attachment_links_json: JSON.stringify(normalizeStringList(
+            payload.attachment_links,
+            item?.attachment_links_json
+          )),
+          explanation_text: typeof payload.explanation_text === 'string'
+            ? normalizeMarkdownSource(payload.explanation_text)
+            : item?.explanation_text ?? '',
           normalization_text: item?.normalization_text ?? '',
           is_normalized: item?.is_normalized ?? 0,
           created_at_utc: item?.created_at_utc ?? event.occurred_at_utc,
@@ -368,4 +427,18 @@ export const inboxEventMethods = {
 function normalizeInboxPayload(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   return { ...value };
+}
+
+function normalizeStringList(value, fallbackJson = '[]') {
+  const raw = Array.isArray(value) ? value : parseJsonArray(fallbackJson);
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set();
+  const result = [];
+  for (const entry of raw) {
+    const text = sanitizeText(entry);
+    if (!text || seen.has(text)) continue;
+    seen.add(text);
+    result.push(text);
+  }
+  return result;
 }
