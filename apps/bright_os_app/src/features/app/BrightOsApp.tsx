@@ -65,6 +65,8 @@ export function BrightOsApp({ initialSection = "actions" }: { initialSection?: S
           trailing={
             screenSection === "actions" && mobileViewport ? (
               <IconButton icon={Info} label="Информация о действиях" active={app.actionsInfoActive} onClick={app.toggleActionsInfoPanel} />
+            ) : screenSection === "inbox" && mobileViewport ? (
+              <IconButton icon={Info} label="Информация о входящих" active={app.inboxInfoActive} onClick={app.toggleInboxInfoPanel} />
             ) : screenSection === "focus" ? (
               <>
                 <IconButton icon={Crown} label="Цели фокусировки" active={app.focusGoalActive} onClick={() => app.toggleFocusContextPanel("goal")} />
@@ -200,6 +202,11 @@ export function BrightOsApp({ initialSection = "actions" }: { initialSection?: S
       {app.mobileContextPanel === "actions-info" && app.section === "actions" ? (
         <MobileContextSheet label="Информация о действиях" onClose={() => app.setMobileContextPanel(null)} onCloseStart={app.markMobileContextPanelClosing}>
           <ActionsInfoPanel mobile />
+        </MobileContextSheet>
+      ) : null}
+      {app.mobileContextPanel === "inbox-info" && app.section === "inbox" ? (
+        <MobileContextSheet label="Информация о входящих" onClose={() => app.setMobileContextPanel(null)} onCloseStart={app.markMobileContextPanelClosing}>
+          <ActionsInfoPanel label="Информация о входящих" mobile />
         </MobileContextSheet>
       ) : null}
       {app.mobileContextPanel === "focus-goal" && app.section === "focus" ? (

@@ -114,6 +114,26 @@ test("opens and closes mobile Actions info as a bottom sheet", async ({ page }, 
   await expect(page.locator(".mobile-context-sheet")).toHaveCount(0);
 });
 
+test("opens and closes mobile Inbox info as a bottom sheet", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "mobile-only inbox info");
+
+  await page.goto("/inbox");
+  await page.getByRole("button", { name: "Информация о входящих" }).click();
+  const sheet = page.locator(".mobile-context-sheet");
+  await expect(sheet).toBeVisible();
+  await expect(sheet.locator(".mobile-context-grabber")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Основная навигация" })).toHaveCount(0);
+
+  const dragZone = await sheet.locator(".mobile-context-drag-zone").boundingBox();
+  const viewport = page.viewportSize();
+  const dragX = (dragZone?.x ?? 0) + (dragZone?.width ?? 0) / 2;
+  await page.mouse.move(dragX, (dragZone?.y ?? 0) + 8);
+  await page.mouse.down();
+  await page.mouse.move(dragX, (viewport?.height ?? 640) - 12, { steps: 6 });
+  await page.mouse.up();
+  await expect(page.locator(".mobile-context-sheet")).toHaveCount(0);
+});
+
 test("keeps a single mobile action compact without creating empty scroll", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "mobile-only action layout");
 

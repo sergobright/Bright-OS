@@ -25,6 +25,17 @@ describe("BrightOsApp shell", () => {
     expect(screen.getByRole("textbox", { name: "Добавить" })).toBeInTheDocument();
   });
 
+  it("opens the mobile Inbox info sheet", async () => {
+    render(<BrightOsApp initialSection="inbox" />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Входящие" })).toBeInTheDocument());
+    const infoButton = await screen.findByRole("button", { name: "Информация о входящих" });
+    fireEvent.click(infoButton);
+
+    expect(document.querySelector(".mobile-context-sheet")).toBeInTheDocument();
+    expect(infoButton).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("keeps contextual actions before the rightmost sync status", async () => {
     render(<BrightOsApp />);
 
