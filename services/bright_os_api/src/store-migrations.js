@@ -1254,9 +1254,9 @@ export const migrationMethods = {
       'build',
       1,
       null,
-      'Initial public web/OTA baseline.',
-      'Published browser web and Android OTA baseline build 1 with min APK versionCode 1.',
-      'Initial public baseline.',
+      'Первичная публичная web/OTA-сборка.',
+      'Опубликована первичная browser web и Android OTA-сборка 1 с минимальным APK versionCode 1.',
+      'Нужно зафиксировать первую чистую публичную web/OTA-версию.',
       buildReleasedAt,
       now
     );
@@ -1264,9 +1264,9 @@ export const migrationMethods = {
       'apk',
       1,
       null,
-      'Initial public APK baseline.',
-      'APK baseline 1 uses Android versionCode 1. Release signing material is supplied outside the repository.',
-      'Initial public baseline.',
+      'Первичная публичная APK-сборка.',
+      'Первичная APK-сборка 1 использует Android versionCode 1. Release signing material хранится вне репозитория.',
+      'Нужно зафиксировать первую устанавливаемую публичную APK-сборку.',
       apkReleasedAt,
       now
     );

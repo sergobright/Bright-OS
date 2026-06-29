@@ -42,13 +42,13 @@ if [[ "$GIT_SUBJECT" == Merge\ pull\ request* && -n "$GIT_BODY" ]]; then
   done <<<"$GIT_BODY"
   GIT_BODY=""
 fi
-DEPLOY_SHORT_CHANGES="${BRIGHT_OS_DEPLOY_SHORT_CHANGES:-${GIT_SUBJECT:-Branch deployment}}"
+DEPLOY_SHORT_CHANGES="${BRIGHT_OS_DEPLOY_SHORT_CHANGES:-${GIT_SUBJECT:-Деплой ветки}}"
 if [[ -n "${BRIGHT_OS_DEPLOY_DETAILED_CHANGES:-}" ]]; then
   DEPLOY_DETAILED_CHANGES="$BRIGHT_OS_DEPLOY_DETAILED_CHANGES"
 elif [[ -n "$GIT_BODY" ]]; then
   DEPLOY_DETAILED_CHANGES="$GIT_SUBJECT"$'\n\n'"$GIT_BODY"
 else
-  DEPLOY_DETAILED_CHANGES="${GIT_SUBJECT:-Branch deployment}"
+  DEPLOY_DETAILED_CHANGES="${GIT_SUBJECT:-Деплой ветки}"
 fi
 
 if [[ "$ENVIRONMENT" == "prod" ]]; then
@@ -143,7 +143,7 @@ if ! "$NODE_BIN" "$SCRIPT_DIR/record-deployment.mjs" \
   --web-ota-version "$BUNDLE_VERSION" \
   --short-changes "$DEPLOY_SHORT_CHANGES" \
   --detailed-changes "$DEPLOY_DETAILED_CHANGES" \
-  --reason "${BRIGHT_OS_DEPLOY_REASON:-Automated branch delivery}"; then
+  --reason "${BRIGHT_OS_DEPLOY_REASON:-Автоматическая доставка ветки}"; then
   if [[ "$ENVIRONMENT" != preview-* ]]; then
     exit 1
   fi

@@ -110,7 +110,7 @@ fi
   --target-domain "$TARGET_DOMAIN" \
   --source-commit "$SOURCE_COMMIT" \
   --source-slot "${SLOT:-}" \
-  --source-short-changes "${SOURCE_SHORT_CHANGES:-Accepted preview changes without authored release notes.}" \
-  --source-details "${SOURCE_DETAILS:-No authored preview release notes were available; audit metadata is stored separately.}" \
-  --reason "${BRIGHT_OS_PROMOTE_REASON:-Accepted branch promotion}" \
+  --source-short-changes "${SOURCE_SHORT_CHANGES:-Приняты изменения preview без авторского описания релиза.}" \
+  --source-details "${SOURCE_DETAILS:-Авторское описание релиза из preview недоступно; аудит-метаданные сохранены отдельно.}" \
+  --reason "${BRIGHT_OS_PROMOTE_REASON:-Повышение принятой ветки}" \
   --record-production-release "${BRIGHT_OS_RECORD_PRODUCTION_RELEASE:-false}"

@@ -341,16 +341,16 @@ test('migration seeds unified build version ledger', async () => {
     assert.ok(baselineApk);
     assert.equal(baselineApk.included_in_version_id, null);
     assert.equal(baselineApk.released_at_utc, '2026-06-23T09:13:50Z');
-    assert.match(baselineApk.short_changes, /APK/);
+    assert.match(baselineApk.short_changes, /публичная APK-сборка/);
     assert.match(baselineApk.detailed_changes, /versionCode 1/);
-    assert.match(baselineApk.detailed_changes, /Release signing material/);
+    assert.match(baselineApk.detailed_changes, /вне репозитория/);
 
     const baselineBuild = versions.find((version) => version.version_type_id === 'build' && version.version === 1);
     assert.ok(baselineBuild);
     assert.equal(baselineBuild.included_in_version_id, null);
     assert.equal(baselineBuild.released_at_utc, '2026-06-23T09:12:45Z');
-    assert.match(baselineBuild.short_changes, /web\/OTA/);
-    assert.match(baselineBuild.detailed_changes, /min APK versionCode 1/);
+    assert.match(baselineBuild.short_changes, /web\/OTA-сборка/);
+    assert.match(baselineBuild.detailed_changes, /минимальным APK versionCode 1/);
 
     fixture.store.migrate();
     assert.equal(fixture.store.db.prepare('SELECT COUNT(*) AS count FROM build_versions').get().count, 2);
@@ -370,9 +370,9 @@ test('migration adds environment deployment ledger', async () => {
       commit: 'abc123456789',
       domain: 'a.test.brightos.world',
       webOtaVersion: '0.0.1.2.42',
-      shortChanges: 'Preview deploy',
-      detailedChanges: 'Automated preview deploy.',
-      reason: 'Preview accepted',
+      shortChanges: 'Preview-деплой',
+      detailedChanges: 'Автоматический preview-деплой.',
+      reason: 'Preview принят',
       deployedAtUtc: '2026-06-23T12:00:00.000Z'
     });
 

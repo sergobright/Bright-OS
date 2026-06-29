@@ -67,9 +67,9 @@ export const deploymentMethods = {
   }) {
     const existing = this.findBuildVersionByTargetCommit({ targetBranch, targetCommit, versionTypeId: 'build' });
     const version = existing?.version ?? this.nextVersion('build');
-    const fallbackShortChanges = 'Accepted preview changes without authored release notes.';
-    const fallbackDetailedChanges = 'No authored preview release notes were available; audit metadata is stored separately.';
-    const fallbackReason = 'Needed because no authored preview release notes were available; audit metadata is stored separately.';
+    const fallbackShortChanges = 'Приняты изменения preview без авторского описания релиза.';
+    const fallbackDetailedChanges = 'Авторское описание релиза из preview недоступно; аудит-метаданные сохранены отдельно.';
+    const fallbackReason = 'Нужно записать принятую сборку, хотя авторское описание релиза из preview недоступно.';
     const shortChanges = usefulChanges(sourceShortChanges) || fallbackShortChanges;
     const detailedChanges = usefulChanges(sourceDetails) || (shortChanges === fallbackShortChanges ? fallbackDetailedChanges : shortChanges);
     this.upsertBuildVersion({
@@ -81,7 +81,7 @@ export const deploymentMethods = {
       reason: usefulReason(sourceReason)
         || (shortChanges === fallbackShortChanges ? fallbackReason : '')
         || reasonFromChanges(detailedChanges, shortChanges)
-        || `Needed to accept ${sourceBranch} into ${targetBranch}.`,
+        || 'Нужно записать принятую сборку в журнал версий.',
       releasedAtUtc,
       sourceBranch,
       sourceCommit,
@@ -119,12 +119,12 @@ export const deploymentMethods = {
       versionTypeId: 'release',
       version,
       includedInVersionId: null,
-      shortChanges: usefulChanges(sourceShortChanges) || `Release ${version}.`,
+      shortChanges: usefulChanges(sourceShortChanges) || `Релиз ${version}.`,
       detailedChanges: [
-        `Included builds: ${builds.map((row) => `build ${row.version}: ${row.short_changes}`).join('; ')}.`,
+        `Включённые сборки: ${builds.map((row) => `сборка ${row.version}: ${row.short_changes}`).join('; ')}.`,
         sourceChanges,
       ].filter(Boolean).join(' '),
-      reason: usefulReason(sourceReason) || 'Needed to group accepted builds into a manual release.',
+      reason: usefulReason(sourceReason) || 'Нужно объединить принятые сборки в ручной релиз.',
       releasedAtUtc,
       sourceBranch,
       sourceCommit,
@@ -168,12 +168,12 @@ export const deploymentMethods = {
       versionTypeId: 'canon',
       version,
       includedInVersionId: null,
-      shortChanges: usefulChanges(sourceShortChanges) || `Canon ${version}.`,
+      shortChanges: usefulChanges(sourceShortChanges) || `Канон ${version}.`,
       detailedChanges: [
-        `Included releases: ${releases.map((row) => `release ${row.version}: ${row.short_changes}`).join('; ')}.`,
+        `Включённые релизы: ${releases.map((row) => `релиз ${row.version}: ${row.short_changes}`).join('; ')}.`,
         sourceChanges,
       ].filter(Boolean).join(' '),
-      reason: usefulReason(sourceReason) || 'Needed to group releases into a manual canon.',
+      reason: usefulReason(sourceReason) || 'Нужно объединить релизы в ручной канон.',
       releasedAtUtc,
       sourceBranch,
       sourceCommit,
@@ -341,6 +341,8 @@ function usefulChanges(value) {
   if (/^Accepted \S+@\S+ without preview deployment metadata\.?$/i.test(oneLine)) return '';
   if (/^Accepted preview changes without authored release notes\.?$/i.test(oneLine)) return '';
   if (/^No authored preview release notes were available; audit metadata is stored separately\.?$/i.test(oneLine)) return '';
+  if (/^Приняты изменения preview без авторского описания релиза\.?$/i.test(oneLine)) return '';
+  if (/^Авторское описание релиза из preview недоступно; аудит-метаданные сохранены отдельно\.?$/i.test(oneLine)) return '';
   return text;
 }
 
@@ -359,5 +361,5 @@ function usefulReason(value) {
 function reasonFromChanges(detailedChanges, shortChanges) {
   const text = usefulChanges(detailedChanges) || usefulChanges(shortChanges);
   if (!text) return '';
-  return `Needed because ${text.replace(/\.$/, '').replace(/^./, (letter) => letter.toLowerCase())}.`;
+  return `Нужно: ${text.replace(/\.$/, '')}.`;
 }
