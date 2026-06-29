@@ -54,6 +54,9 @@ NODE
     RELEASE_ROOT="$ENVS_ROOT/$SLOT_SOURCE"
   fi
 fi
+if [[ ! -r "$RELEASE_ROOT/deploy/scripts/preview-slots.mjs" && -r "$ENVS_ROOT/prod/source/deploy/scripts/preview-slots.mjs" ]]; then
+  RELEASE_ROOT="$ENVS_ROOT/prod/source"
+fi
 
 if [[ ! -r "$RELEASE_ROOT/deploy/scripts/preview-slots.mjs" ]]; then
   echo "Cannot read preview slot tooling from $RELEASE_ROOT" >&2
