@@ -872,7 +872,7 @@ function InboxDetailEditor({
             {previewToggle}
             <textarea
               ref={descriptionRef}
-              className="actions-detail-description block min-h-full w-full min-w-0 resize-none overflow-hidden border-0 bg-transparent p-0 text-sm font-normal leading-[1.48] tracking-normal text-foreground placeholder:text-muted-foreground/55 focus:outline-0 max-[860px]:text-base"
+              className="actions-detail-description block min-h-full w-full min-w-0 resize-none overflow-hidden border-0 bg-transparent p-0 pr-12 text-sm font-normal leading-[1.48] tracking-normal text-foreground placeholder:text-muted-foreground/55 focus:outline-0 max-[860px]:text-base"
               value={description}
               placeholder="Введите описание"
               aria-label="Описание входящего"
@@ -912,7 +912,7 @@ function InboxDetailEditor({
     </button>
   );
   const detailTitle = (
-    <div className={cx("actions-detail-title-block relative mb-2 grid min-w-0", mode === "mobile" ? "mt-1.5" : "mt-3")}>
+    <div className="actions-detail-title-block relative mb-2 mt-6 grid min-w-0">
       <textarea
         ref={titleRef}
         className={cx(

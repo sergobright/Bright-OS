@@ -81,6 +81,7 @@ describe("BrightOsApp inbox", () => {
     const detailTitle = screen.getByRole("textbox", { name: "Название входящего" });
     const detailTabs = detailPanel.querySelector(".actions-detail-tabs") as HTMLElement;
     expect(detailTabs.compareDocumentPosition(detailTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(detailTitle.closest(".actions-detail-title-block")).toHaveClass("mt-6");
     expect(detailTitle).not.toHaveClass("truncate");
     expect(detailPanel).toHaveClass("overflow-hidden");
     const limitedTitle = "В".repeat(TITLE_MAX_LENGTH);
@@ -97,6 +98,7 @@ describe("BrightOsApp inbox", () => {
     fireEvent.keyDown(splitSlider, { key: "Home" });
     expect(splitSlider).toHaveAttribute("aria-valuenow", "30");
     const descriptionEditor = screen.getByRole("textbox", { name: "Описание входящего" });
+    expect(descriptionEditor).toHaveClass("pr-12");
     fireEvent.change(descriptionEditor, {
       target: { value: "# Контекст\n\n## Источник\n\n**важно**" },
     });

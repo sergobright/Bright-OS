@@ -741,13 +741,17 @@ test("keeps the desktop inbox detail info after tab switches", async ({ page }, 
   await expect(detailTitle).toHaveCSS("white-space", "pre-wrap");
   await expect(detailTitle).toHaveCSS("overflow-wrap", "anywhere");
   expect(tabsBox?.y ?? 0).toBeLessThan(titleBox?.y ?? 0);
+  expect((titleBox?.y ?? 0) - ((tabsBox?.y ?? 0) + (tabsBox?.height ?? 0))).toBeGreaterThanOrEqual(20);
+  expect((titleBox?.y ?? 0) - ((tabsBox?.y ?? 0) + (tabsBox?.height ?? 0))).toBeLessThanOrEqual(28);
   expect(titleBox?.height ?? 0).toBeGreaterThan(44);
   await expect.poll(() => detailTitle.evaluate((node) => node.scrollHeight <= node.clientHeight + 1)).toBe(true);
   const titleHeightBeforeTabSwitch = titleBox?.height ?? 0;
   await expect(panel.locator(".actions-detail-header .actions-detail-preview-toggle")).toHaveCount(0);
   await expect(panel.locator(".actions-detail-description-scroll .actions-detail-preview-toggle")).toBeVisible();
 
-  await page.getByRole("textbox", { name: "Описание входящего" }).fill(descriptionText);
+  const descriptionEditor = page.getByRole("textbox", { name: "Описание входящего" });
+  await expect(descriptionEditor).toHaveCSS("padding-right", "48px");
+  await descriptionEditor.fill(descriptionText);
   await page.getByRole("button", { name: "Читать описание" }).click();
   await expect(page.locator(".actions-detail-description-preview")).toContainText("Контекст");
   await expect(page.locator(".actions-detail-description-preview")).toContainText("Д Л");

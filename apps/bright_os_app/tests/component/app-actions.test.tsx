@@ -256,6 +256,7 @@ describe("BrightOsApp actions", () => {
     const detailTitle = screen.getByRole("textbox", { name: "Название действия" });
     const detailTabs = detailPanel.querySelector(".actions-detail-tabs") as HTMLElement;
     expect(detailTabs.compareDocumentPosition(detailTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(detailTitle.closest(".actions-detail-title-block")).toHaveClass("mt-6");
     expect(detailTitle).not.toHaveClass("truncate");
     expect(detailPanel).toHaveClass("overflow-hidden");
     const limitedTitle = "А".repeat(TITLE_MAX_LENGTH);
@@ -286,7 +287,7 @@ describe("BrightOsApp actions", () => {
 
     const descriptionEditor = screen.getByRole("textbox", { name: "Описание действия" });
     expect(descriptionEditor.closest("[data-slot='scroll-area']")).toBeInTheDocument();
-    expect(descriptionEditor).toHaveClass("overflow-hidden");
+    expect(descriptionEditor).toHaveClass("overflow-hidden", "pr-12");
     fireEvent.change(descriptionEditor, {
       target: { value: "# Большое описание\n\n## Цель\n\n**важно**" },
     });
