@@ -8,7 +8,6 @@ import { fileURLToPath } from "node:url";
 const repoRoot = path.resolve(import.meta.dirname, "../..");
 const requireFromApi = createRequire(path.join(repoRoot, "services/bright_os_api/package.json"));
 const Database = requireFromApi("better-sqlite3");
-const LEGACY_PRODUCTION_MOBILE_BUNDLE_FLOOR = "0.10.48.1";
 if (path.resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
   const args = parseArgs(process.argv.slice(2));
   console.log(resolveAppVersion({
@@ -18,7 +17,6 @@ if (path.resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
     prodDb: args["prod-db"],
     prodWebVersionJson: args["prod-web-version-json"],
     mobileTarget: args["mobile-target"],
-    mobileBundle: args["mobile-bundle"] === "true",
     nextApk: args["next-apk"] === "true",
     targetBranch: args["target-branch"],
     targetCommit: args["target-commit"],
@@ -33,18 +31,15 @@ export function resolveAppVersion({
   prodWebVersionJson = "",
   mobileTarget = "",
   explicit = process.env.BRIGHT_OS_APP_VERSION || "",
-  mobileBundle = false,
   nextApk = false,
   targetBranch = "",
   targetCommit = "",
 } = {}) {
-  if (explicit && !mobileBundle) return validVersion(explicit);
+  if (explicit) return validVersion(explicit);
 
   if (environment === "prod" && db) {
     const ledgerVersion = latestProductionVersion(db, { nextApk, targetBranch, targetCommit });
-    if (ledgerVersion) {
-      return validVersion(mobileBundle ? productionMobileBundleVersion(ledgerVersion, db, mobileTarget) : ledgerVersion);
-    }
+    if (ledgerVersion) return validVersion(ledgerVersion);
   }
 
   const resolvedVersion = latestBrightVersion([
@@ -127,44 +122,6 @@ function latestMobileTargetVersion(mobileTarget) {
   }
 
   return latestBrightVersion(versions);
-}
-
-function productionMobileBundleVersion(ledgerVersion, dbPath, mobileTarget) {
-  const latestPublished = latestBrightVersion([
-    // APK 0.0.41.3 shipped with web 0.10.48.1 before the current prod deployment ledger existed.
-    LEGACY_PRODUCTION_MOBILE_BUNDLE_FLOOR,
-    dbPath && latestProductionDeploymentVersion(dbPath),
-    mobileTarget && latestMobileTargetVersion(mobileTarget),
-  ]);
-  if (latestPublished && compareBrightVersions(latestPublished, ledgerVersion) > 0) {
-    return nextWebBundleVersion(latestPublished);
-  }
-  return ledgerVersion;
-}
-
-function latestProductionDeploymentVersion(dbPath) {
-  if (!fs.existsSync(dbPath)) return "";
-  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
-  try {
-    const rows = db
-      .prepare(`
-        SELECT web_ota_version
-        FROM deployment_records
-        WHERE environment = 'prod'
-          AND web_ota_version IS NOT NULL
-          AND web_ota_version != ''
-      `)
-      .all();
-    return latestBrightVersion(rows.map((row) => row.web_ota_version));
-  } finally {
-    db.close();
-  }
-}
-
-function nextWebBundleVersion(version) {
-  const parts = version.split(".").map(Number);
-  parts[2] += 1;
-  return parts.join(".");
 }
 
 function latestBrightVersion(values) {

@@ -275,7 +275,6 @@ try {
 
     await mkdir(path.join(root, "deploy/web"), { recursive: true });
     await writeFile(path.join(root, "deploy/web/version.json"), JSON.stringify({ version: "0.0.38.1" }));
-    const prodMobileTarget = path.join(root, "deploy/mobile-update");
     const mobileTarget = path.join(root, "envs/preview-a/mobile-update");
     await mkdir(path.join(mobileTarget, "bundles/0.11.52.1.20260629202736"), { recursive: true });
     await writeFile(
@@ -287,29 +286,23 @@ try {
     await execFileAsync("node", ["--input-type=module", "-e", `
 const fs = await import("node:fs/promises");
 const { pathToFileURL } = await import("node:url");
-const [, resolver, root, db, prodWebVersionJson, prodMobileTarget, mobileTarget, outputPath] = process.argv.slice(1);
+const [, resolver, root, db, prodWebVersionJson, mobileTarget, outputPath] = process.argv.slice(1);
 const { resolveAppVersion } = await import(pathToFileURL(resolver));
-process.env.BRIGHT_OS_APP_VERSION = "0.5.43.1";
 await fs.writeFile(outputPath, JSON.stringify({
   production: resolveAppVersion({ environment: "prod", root, db, explicit: "" }),
-  productionBundle: resolveAppVersion({ environment: "prod", root, db, mobileTarget: prodMobileTarget, explicit: "", mobileBundle: true }),
-  productionBundleWithAppEnv: resolveAppVersion({ environment: "prod", root, db, mobileTarget: prodMobileTarget, mobileBundle: true }),
   nextProductionApk: resolveAppVersion({ environment: "prod", root, db, explicit: "", nextApk: true, targetBranch: "main", targetCommit: "abc" }),
   preview: resolveAppVersion({ environment: "preview-a", root, prodDb: db, prodWebVersionJson, mobileTarget, explicit: "" }),
 }));
-`, "import-helper", resolver, root, dbPath, path.join(root, "deploy/web/version.json"), prodMobileTarget, mobileTarget, outputPath], { env: nodeCliEnv });
+`, "import-helper", resolver, root, dbPath, path.join(root, "deploy/web/version.json"), mobileTarget, outputPath], { env: nodeCliEnv });
     const versions = JSON.parse(await readFile(outputPath, "utf8"));
     const deployBranch = await readFile(path.join(workspaceRoot, "deploy/scripts/deploy-branch.sh"), "utf8");
     const ciDeploy = await readFile(path.join(workspaceRoot, "deploy/scripts/ci-ssh-deploy.sh"), "utf8");
 
     expect(versions.production).toBe("0.5.43.1");
-    expect(versions.productionBundle).toBe("0.10.49.1");
-    expect(versions.productionBundleWithAppEnv).toBe("0.10.49.1");
     expect(versions.nextProductionApk).toBe("0.5.43.2");
     expect(versions.preview).toBe("0.11.52.1");
     expect(deployBranch).toContain('--prod-db "${BRIGHT_OS_PROD_DB:-}"');
     expect(deployBranch).toContain('--mobile-target "$MOBILE_TARGET"');
-    expect(deployBranch).toContain("--mobile-bundle true");
     expect(await readFile(path.join(workspaceRoot, "deploy/scripts/build-android-env-apk.sh"), "utf8")).toContain('--mobile-target "${BRIGHT_OS_MOBILE_TARGET:-${BRIGHT_OS_ENVS_ROOT:-/srv/projects/bright-os-envs}/$ENV_PATH/mobile-update}"');
     expect(ciDeploy).toContain('export BRIGHT_OS_PROD_DB="$DEPLOY_REPO/data/bright_os.sqlite"');
   });
@@ -392,14 +385,10 @@ try {
 
   it("restores stale preview source permissions before deploy cleanup", async () => {
     const script = await readFile(path.join(workspaceRoot, "deploy/scripts/ci-ssh-deploy.sh"), "utf8");
-    const deployBranch = await readFile(path.join(workspaceRoot, "deploy/scripts/deploy-branch.sh"), "utf8");
 
     expect(script).toContain('find "$SOURCE_ROOT" -user "$(id -u)" -exec chmod u+rwX,g+rwX {} + || true');
     expect(script).toContain('rm -rf "$SOURCE_ROOT" || { sleep 2; rm -rf "$SOURCE_ROOT"; }');
     expect(script.indexOf('find "$SOURCE_ROOT" -user "$(id -u)"')).toBeLessThan(script.indexOf('rm -rf "$SOURCE_ROOT"'));
-    expect(deployBranch).toContain('if ! rm -f "${RESET_DB_FILES[@]}"; then');
-    expect(deployBranch).toContain('"${BRIGHT_OS_SUDO:-sudo}" -n rm -f "${RESET_DB_FILES[@]}"');
-    expect(deployBranch).toContain("Warning: preview DB reset skipped");
   });
 
   it("rebuilds all APK release rows from production native deploys", async () => {

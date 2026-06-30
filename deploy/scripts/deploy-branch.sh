@@ -67,12 +67,7 @@ if [[ "$ENVIRONMENT" == preview-* && "$ALLOCATED_NEW" == "true" && "${BRIGHT_OS_
   case "$TARGET_ROOT" in
     "$ENVS_ROOT"/preview-*)
       find "$TARGET_ROOT" -user "$(id -u)" -exec chmod u+rwX,g+rwX {} + || true
-      RESET_DB_FILES=("$TARGET_ROOT/data/bright_os.sqlite" "$TARGET_ROOT/data/bright_os.sqlite-shm" "$TARGET_ROOT/data/bright_os.sqlite-wal")
-      if ! rm -f "${RESET_DB_FILES[@]}"; then
-        if ! "${BRIGHT_OS_SUDO:-sudo}" -n rm -f "${RESET_DB_FILES[@]}"; then
-          echo "Warning: preview DB reset skipped; unable to remove existing SQLite files." >&2
-        fi
-      fi
+      rm -f "$TARGET_ROOT/data/bright_os.sqlite" "$TARGET_ROOT/data/bright_os.sqlite-shm" "$TARGET_ROOT/data/bright_os.sqlite-wal"
       ;;
     *)
       echo "Refusing to reset preview DB outside $ENVS_ROOT/preview-* path: $TARGET_ROOT" >&2
@@ -81,19 +76,16 @@ if [[ "$ENVIRONMENT" == preview-* && "$ALLOCATED_NEW" == "true" && "${BRIGHT_OS_
   esac
 fi
 
-VERSION_ARGS=(
+VERSION="${BRIGHT_OS_APP_VERSION:-$("$NODE_BIN" "$SCRIPT_DIR/resolve-app-version.mjs" \
   --environment "$ENVIRONMENT" \
   --root "$ROOT" \
   --db "$DB_PATH" \
   --prod-db "${BRIGHT_OS_PROD_DB:-}" \
   --prod-web-version-json "${BRIGHT_OS_PROD_WEB_VERSION_JSON:-}" \
-  --mobile-target "$MOBILE_TARGET"
-)
-
-VERSION="${BRIGHT_OS_APP_VERSION:-$("$NODE_BIN" "$SCRIPT_DIR/resolve-app-version.mjs" "${VERSION_ARGS[@]}")}"
+  --mobile-target "$MOBILE_TARGET")}"
 
 if [[ "$ENVIRONMENT" == "prod" ]]; then
-  BUNDLE_VERSION="${BRIGHT_OS_MOBILE_BUNDLE_VERSION:-$("$NODE_BIN" "$SCRIPT_DIR/resolve-app-version.mjs" "${VERSION_ARGS[@]}" --mobile-bundle true)}"
+  BUNDLE_VERSION="${BRIGHT_OS_MOBILE_BUNDLE_VERSION:-$VERSION}"
 else
   BUNDLE_VERSION="${BRIGHT_OS_MOBILE_BUNDLE_VERSION:-$VERSION.$RUN_ID}"
 fi
