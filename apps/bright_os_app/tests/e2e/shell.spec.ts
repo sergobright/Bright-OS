@@ -629,9 +629,9 @@ test("opens the desktop activity description split panel", async ({ page }, test
   await expect
     .poll(async () => ((await page.locator(".actions-list-pane").boundingBox())?.width ?? 0) / ((await page.locator(".actions-workspace").boundingBox())?.width ?? 1))
     .toBeGreaterThan(0.49);
-  const overLimitTitle = "я".repeat(520);
+  const overLimitTitle = "я".repeat(270);
   await detailTitle.fill(overLimitTitle);
-  await expect.poll(async () => (await detailTitle.inputValue()).length).toBe(500);
+  await expect.poll(async () => (await detailTitle.inputValue()).length).toBe(250);
   await expect(detailPanel.locator(".actions-detail-title-counter")).toHaveText("0");
   await expect(page.locator(".actions-detail-tabs")).toBeVisible();
 
@@ -641,10 +641,17 @@ test("opens the desktop activity description split panel", async ({ page }, test
 
 ## Цель
 
-**важно** ${"длинная строка ".repeat(20)}`;
+**важно** ${"длинная строка ".repeat(120)}`;
   await expect.poll(() => descriptionEditor.evaluate((node) => node.closest(".actions-detail-description-scroll")?.getAttribute("data-slot"))).toBe("scroll-area");
   await expect(descriptionEditor).toHaveClass(/overflow-hidden/);
   await descriptionEditor.fill(descriptionText);
+  const infoViewport = page.locator(".actions-detail-description-scroll > [data-slot='scroll-area-viewport']");
+  const titleTopBeforeScroll = (await detailTitle.boundingBox())?.y ?? 0;
+  await infoViewport.evaluate((element) => {
+    element.scrollTop = 120;
+  });
+  await expect.poll(() => infoViewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  expect((await detailTitle.boundingBox())?.y ?? 0).toBeLessThan(titleTopBeforeScroll - 20);
   const readModeButton = page.getByRole("button", { name: "Читать описание" });
   await expect(readModeButton).toHaveAttribute("aria-pressed", "false");
   await readModeButton.click();

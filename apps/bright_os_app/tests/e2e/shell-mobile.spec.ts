@@ -340,8 +340,8 @@ test("opens the mobile bottom-sheet activity detail editor", async ({ page }, te
   expect(titleBox?.height ?? 0).toBeGreaterThan(44);
   await expect(editorLocator.locator(".actions-detail-header .actions-detail-preview-toggle")).toHaveCount(0);
   await expect(editorLocator.locator(".actions-detail-description-scroll .actions-detail-preview-toggle")).toBeVisible();
-  await detailTitle.fill("м".repeat(520));
-  await expect.poll(async () => (await detailTitle.inputValue()).length).toBe(500);
+  await detailTitle.fill("м".repeat(270));
+  await expect.poll(async () => (await detailTitle.inputValue()).length).toBe(250);
   await expect(editorLocator.locator(".actions-detail-title-counter")).toHaveText("0");
   await expect(page.getByRole("textbox", { name: "Описание действия" })).toBeVisible();
 
@@ -370,10 +370,12 @@ test("opens the mobile bottom-sheet activity detail editor", async ({ page }, te
   await page.getByRole("button", { name: "Читать описание" }).click();
   await expect(page.locator(".actions-detail-description-preview")).toContainText("строка 36");
   const descriptionViewport = page.locator(".actions-detail-description-scroll [data-slot='scroll-area-viewport']");
+  const titleTopBeforeScroll = (await detailTitle.boundingBox())?.y ?? 0;
   await descriptionViewport.evaluate((element) => {
     element.scrollTop = 180;
   });
   await expect.poll(() => descriptionViewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  expect((await detailTitle.boundingBox())?.y ?? 0).toBeLessThan(titleTopBeforeScroll - 20);
   const previewBox = await page.locator(".actions-detail-description-preview").boundingBox();
   const bodyDragX = (previewBox?.x ?? 0) + (previewBox?.width ?? 320) / 2;
   const bodyDragY = (previewBox?.y ?? 0) + Math.min((previewBox?.height ?? 320) / 2, 220);

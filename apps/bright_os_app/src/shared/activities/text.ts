@@ -1,4 +1,4 @@
-export const TITLE_MAX_LENGTH = 500;
+export const TITLE_MAX_LENGTH = 250;
 export const TITLE_COUNTER_THRESHOLD = 50;
 
 export function singleLineTitle(value: unknown): string {

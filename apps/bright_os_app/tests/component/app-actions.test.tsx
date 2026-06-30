@@ -496,7 +496,7 @@ describe("BrightOsApp actions", () => {
     const preview = await screen.findByLabelText("MD просмотр описания действия");
     expect(preview).toHaveTextContent("https://magicui.design/docs/templates/changelog");
     expect(preview.querySelector(".markdown-content")).toBeNull();
-    expect(preview.firstElementChild).toHaveClass("whitespace-pre-wrap", "leading-[1.48]");
+    expect(preview.querySelector(".whitespace-pre-wrap")).toHaveClass("leading-[1.48]");
     fireEvent.click(screen.getByRole("button", { name: "Редактировать описание" }));
     await waitFor(() => expect(screen.getByRole("textbox", { name: "Описание действия" })).toHaveValue(plainDescription));
     expect(window.localStorage.getItem("bright_os_activity_md_preview")).toBe("false");
