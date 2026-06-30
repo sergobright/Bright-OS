@@ -15,6 +15,9 @@ if (path.resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
     environment: args.environment,
     db: args.db,
     prodWebVersionJson: args["prod-web-version-json"],
+    nextApk: args["next-apk"] === "true",
+    targetBranch: args["target-branch"],
+    targetCommit: args["target-commit"],
   }));
 }
 
@@ -24,11 +27,14 @@ export function resolveAppVersion({
   db = "",
   prodWebVersionJson = "",
   explicit = process.env.BRIGHT_OS_APP_VERSION || "",
+  nextApk = false,
+  targetBranch = "",
+  targetCommit = "",
 } = {}) {
   if (explicit) return validVersion(explicit);
 
   if (environment === "prod" && db) {
-    const ledgerVersion = latestProductionVersion(db);
+    const ledgerVersion = latestProductionVersion(db, { nextApk, targetBranch, targetCommit });
     if (ledgerVersion) return validVersion(ledgerVersion);
   }
 
@@ -44,7 +50,7 @@ function validVersion(version) {
   return version;
 }
 
-function latestProductionVersion(dbPath) {
+function latestProductionVersion(dbPath, { nextApk = false, targetBranch = "", targetCommit = "" } = {}) {
   const db = new Database(dbPath, { readonly: true, fileMustExist: true });
   try {
     const row = db
@@ -57,8 +63,25 @@ function latestProductionVersion(dbPath) {
         FROM build_versions
       `)
       .get();
-    if (!row?.build || !row?.apk) return "";
-    return `${row.canon}.${row.release}.${row.build}.${row.apk}`;
+    let apk = Number(row?.apk || 0);
+    if (nextApk) {
+      const existing = targetCommit
+        ? db
+          .prepare(`
+            SELECT version
+            FROM build_version_refs
+            WHERE version_type_id = 'apk'
+              AND target_branch = ?
+              AND target_commit = ?
+            ORDER BY version DESC
+            LIMIT 1
+          `)
+          .get(targetBranch || "", targetCommit)
+        : null;
+      apk = existing?.version ?? apk + 1;
+    }
+    if (!row?.build || !apk) return "";
+    return `${row.canon}.${row.release}.${row.build}.${apk}`;
   } finally {
     db.close();
   }
