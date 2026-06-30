@@ -13,6 +13,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/shared/ui/input-
 import { ScrollArea } from "@/shared/ui/scroll-area";
 import { cx, fitTextareaHeight } from "../../appUtils";
 import { useMobileSheetDrag } from "../../hooks/useMobileSheetDrag";
+import { useMobileSheetTop } from "../../hooks/useMobileSheetTop";
 import { isMobileNavigationViewport } from "../../navigation/useSectionSwipeNavigation";
 import {
   DetailAttachments,
@@ -70,6 +71,7 @@ export function InboxSection({
     openDeleteItemId && state.inbox.some((item) => item.id === openDeleteItemId) ? openDeleteItemId : null;
   const mobileOverlayOpen = mobileCreateOpen || mobileEditItem != null;
   const desktopSidePanelOpen = true;
+  const mobileSheetTop = useMobileSheetTop();
   const mobileCreateHasDraft = mobileCreateDraftHasText(mobileCreateDraft);
   const MobileCreateFabIcon = mobileCreateHasDraft ? FilePenLine : Plus;
   const mobileCreateFabLabel = mobileCreateHasDraft ? "Продолжить черновик входящего" : "Добавить входящее";
@@ -348,6 +350,7 @@ export function InboxSection({
       {mobileCreateOpen ? (
         <div
           className="actions-mobile-overlay fixed inset-0 z-[80] hidden items-end bg-foreground/25 pb-[env(safe-area-inset-bottom)] max-[860px]:flex dark:bg-background/80"
+          style={{ top: mobileSheetTop } as CSSProperties}
           data-nav-swipe-exclusion
           onClick={closeMobileCreate}
         >
@@ -678,6 +681,7 @@ function InboxDetailEditor({
     enabled: mode === "mobile",
     onClose: closeEditor,
   });
+  const mobileSheetTop = useMobileSheetTop();
 
   useEffect(() => {
     if (!titleRef.current) return;
@@ -856,8 +860,8 @@ function InboxDetailEditor({
         )}
       >
         {mode === "mobile" ? (
-          <div className="actions-detail-drag-zone absolute left-1/2 top-0 flex h-8 w-32 -translate-x-1/2 touch-none cursor-grab items-start justify-center pt-2 active:cursor-grabbing">
-            <span className="actions-detail-grabber h-1.5 w-[50px] rounded-full bg-muted-foreground/30" aria-hidden="true" />
+          <div className="actions-detail-drag-zone absolute left-1/2 top-0 flex h-6 w-32 -translate-x-1/2 touch-none cursor-grab items-start justify-center pt-1.5 active:cursor-grabbing">
+            <span className="actions-detail-grabber h-1 w-11 rounded-full bg-muted-foreground/30" aria-hidden="true" />
           </div>
         ) : null}
         {activeTab === "info" ? (
@@ -908,7 +912,7 @@ function InboxDetailEditor({
         <aside
           ref={sheetRef}
           className="actions-detail-panel mobile absolute inset-x-0 bottom-0 top-[env(safe-area-inset-top)] z-[1] grid min-h-0 min-w-0 grid-rows-[auto_auto_auto_minmax(0,1fr)] gap-3 overflow-hidden rounded-t-2xl border-t border-border bg-card px-[18px] pb-[env(safe-area-inset-bottom)] pt-2 shadow-xl animate-[mobile-detail-sheet-in_180ms_ease-out] will-change-transform"
-          style={mobileSheetStyle}
+          style={{ ...mobileSheetStyle, top: mobileSheetTop } as CSSProperties}
           aria-label="Редактирование входящего"
           onKeyDown={onKeyDown}
           {...sheetDragHandlers}

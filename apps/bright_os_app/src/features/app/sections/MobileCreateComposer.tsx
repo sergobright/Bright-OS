@@ -1,10 +1,11 @@
 "use client";
 
 import type { FormEvent, KeyboardEvent } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Archive, CalendarDays, Ellipsis, Flag, Maximize2, Plus, Tag } from "lucide-react";
 import { cleanTitle, normalizeDescription, singleLineTitle } from "@/shared/activities/text";
 import { Button } from "@/shared/ui/button";
+import { useMobileSheetDrag } from "../hooks/useMobileSheetDrag";
 import { cx, fitTextareaHeight } from "../appUtils";
 
 export interface MobileCreateDraft {
@@ -46,9 +47,16 @@ export function MobileCreateComposer({
 }) {
   const [descriptionActive, setDescriptionActive] = useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
+  const textScrollRef = useRef<HTMLDivElement | null>(null);
   const titleRef = useRef<HTMLTextAreaElement | null>(null);
   const descriptionRef = useRef<HTMLTextAreaElement | null>(null);
+  const { sheetDragHandlers, sheetRef, sheetStyle } = useMobileSheetDrag({ onClose: onCancel });
   const canSubmit = Boolean(cleanTitle(draft.title));
+
+  const setFormRef = useCallback((node: HTMLFormElement | null) => {
+    formRef.current = node;
+    sheetRef(node);
+  }, [sheetRef]);
 
   useEffect(() => {
     const delay = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 0 : MOBILE_CREATE_AUTOFOCUS_DELAY_MS;
@@ -66,6 +74,7 @@ export function MobileCreateComposer({
   useEffect(() => {
     fitTextareaHeight(titleRef.current);
     fitTextareaHeight(descriptionRef.current);
+    window.requestAnimationFrame(() => scrollActiveFieldIntoView(textScrollRef.current));
   }, [draft.descriptionMd, draft.title]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -95,12 +104,21 @@ export function MobileCreateComposer({
 
   return (
     <form
-      ref={formRef}
-      className="actions-mobile-editor flex max-h-[calc(100dvh_-_env(safe-area-inset-top)_-_8px)] w-full flex-col overflow-hidden rounded-t-2xl bg-card px-5 pb-1 pt-4 shadow-xl motion-safe:animate-[mobile-detail-sheet-in_180ms_ease-out] motion-safe:will-change-transform"
+      ref={setFormRef}
+      className="actions-mobile-editor flex max-h-full w-full flex-col overflow-hidden rounded-t-2xl bg-card px-5 pb-1 pt-2 shadow-xl motion-safe:animate-[mobile-detail-sheet-in_180ms_ease-out] motion-safe:will-change-transform"
+      style={sheetStyle}
       onClick={(event) => event.stopPropagation()}
       onSubmit={submit}
+      {...sheetDragHandlers}
     >
-      <div className="mobile-create-text max-h-[calc(100dvh_-_env(safe-area-inset-top)_-_72px)] min-h-[76px] min-w-0 overflow-y-auto overscroll-contain">
+      <div className="mobile-create-drag-zone flex h-6 shrink-0 touch-none cursor-grab items-start justify-center pt-1.5 active:cursor-grabbing">
+        <span className="mobile-create-grabber h-1 w-11 rounded-full bg-muted-foreground/30" aria-hidden="true" />
+      </div>
+      <div
+        ref={textScrollRef}
+        className="mobile-create-text max-h-[calc(100dvh_-_env(safe-area-inset-top)_-_92px)] min-h-[76px] min-w-0 overflow-y-auto overscroll-contain"
+        data-slot="scroll-area-viewport"
+      >
         <textarea
           ref={titleRef}
           className="actions-mobile-create-title block min-h-6 w-full min-w-0 resize-none overflow-hidden border-0 bg-transparent p-0 text-lg/7 font-semibold tracking-normal text-foreground placeholder:text-muted-foreground/65 focus:outline-0"
@@ -157,4 +175,11 @@ export function MobileCreateComposer({
       </div>
     </form>
   );
+}
+
+function scrollActiveFieldIntoView(scrollElement: HTMLDivElement | null) {
+  const activeElement = document.activeElement;
+  if (!scrollElement || !(activeElement instanceof HTMLTextAreaElement) || !scrollElement.contains(activeElement)) return;
+  const nextScrollTop = activeElement.offsetTop + activeElement.offsetHeight - scrollElement.clientHeight;
+  scrollElement.scrollTop = Math.max(0, nextScrollTop);
 }

@@ -10,6 +10,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/shared/ui/input-
 import { ScrollArea } from "@/shared/ui/scroll-area";
 import { cx } from "../../appUtils";
 import { MobileCreateComposer, mobileCreateDraftHasText, type MobileCreateDraft } from "../MobileCreateComposer";
+import { useMobileSheetTop } from "../../hooks/useMobileSheetTop";
 import { ActionRow, type DetailTitleFocus } from "./ActionRow";
 import { SortableActionList } from "./ActionList";
 import { ActionsInfoPanel } from "./ActionsInfoPanel";
@@ -65,6 +66,7 @@ export function ActionsSection({
     openDeleteActionId && state.actions.some((action) => action.id === openDeleteActionId) ? openDeleteActionId : null;
   const mobileOverlayOpen = mobileCreateOpen || mobileEditAction != null;
   const desktopSidePanelOpen = true;
+  const mobileSheetTop = useMobileSheetTop();
   const mobileCreateHasDraft = mobileCreateDraftHasText(mobileCreateDraft);
   const MobileCreateFabIcon = mobileCreateHasDraft ? FilePenLine : Plus;
   const mobileCreateFabLabel = mobileCreateHasDraft ? "Продолжить черновик действия" : "Добавить действие";
@@ -383,6 +385,7 @@ export function ActionsSection({
       {mobileCreateOpen ? (
         <div
           className="actions-mobile-overlay fixed inset-0 z-[80] hidden items-end bg-foreground/25 pb-[env(safe-area-inset-bottom)] max-[860px]:flex dark:bg-background/80"
+          style={{ top: mobileSheetTop } as CSSProperties}
           data-nav-swipe-exclusion
           onClick={closeMobileCreate}
         >

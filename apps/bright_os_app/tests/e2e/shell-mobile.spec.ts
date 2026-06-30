@@ -75,15 +75,16 @@ test("scrolls mobile create title and description as one text area", async ({ pa
   await expect.poll(() => textArea.evaluate((node) => node.scrollHeight > node.clientHeight)).toBe(true);
   await expect.poll(() => title.evaluate((node) => node.scrollHeight <= node.clientHeight + 1)).toBe(true);
   await expect.poll(() => description.evaluate((node) => node.scrollHeight <= node.clientHeight + 1)).toBe(true);
-  await textArea.evaluate((node) => {
-    node.scrollTop = node.scrollHeight;
-  });
   await expect.poll(() => textArea.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
 
+  const editorBox = await page.locator(".actions-mobile-editor").boundingBox();
+  const topbar = await page.locator(".section-page-current .topbar").boundingBox();
   const textBox = await textArea.boundingBox();
   const titleBox = await title.boundingBox();
   const descriptionBox = await description.boundingBox();
   const toolbarBox = await page.locator(".mobile-create-toolbar").boundingBox();
+  const topbarBottom = (topbar?.y ?? 0) + (topbar?.height ?? 0);
+  expect(Math.abs((editorBox?.y ?? 0) - Math.ceil(topbarBottom))).toBeLessThanOrEqual(1);
   expect(titleBox?.y ?? 0).toBeLessThan(textBox?.y ?? 0);
   expect(descriptionBox?.height ?? 0).toBeGreaterThanOrEqual(36);
   expect((descriptionBox?.y ?? 0) + (descriptionBox?.height ?? 0)).toBeLessThanOrEqual(toolbarBox?.y ?? 0);
@@ -556,11 +557,13 @@ test("opens and closes mobile Focus history as a bottom sheet", async ({ page },
   const titleBox = await sheet.getByRole("heading", { name: "История фокуса" }).boundingBox();
   expect(horizontalCenterOffset(grabberBox, sheetBox)).toBeLessThanOrEqual(1);
   expect(horizontalCenterOffset(titleBox, sheetBox)).toBeLessThanOrEqual(1);
-  await expect.poll(async () => {
+  const grabberTitleGap = expect.poll(async () => {
     const grabber = await sheet.locator(".mobile-context-grabber").boundingBox();
     const title = await sheet.getByRole("heading", { name: "История фокуса" }).boundingBox();
     return (title?.y ?? 0) - ((grabber?.y ?? 0) + (grabber?.height ?? 0));
-  }).toBeGreaterThanOrEqual(8);
+  });
+  await grabberTitleGap.toBeGreaterThanOrEqual(4);
+  await grabberTitleGap.toBeLessThanOrEqual(8);
   await expectMobileSheetScrollbarGeometry(sheet, ".history-group, [data-slot='card']");
 
   await dispatchTouch(page, "touchstart", { x: 320, y: 220 });

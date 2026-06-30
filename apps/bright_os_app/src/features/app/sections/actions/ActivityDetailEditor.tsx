@@ -1,6 +1,6 @@
 "use client";
 
-import type { KeyboardEvent } from "react";
+import type { CSSProperties, KeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { BookOpen, Pencil } from "lucide-react";
 import { installAndroidBackHandler } from "@/shared/platform/platform";
@@ -11,6 +11,7 @@ import { hasMarkdownSyntax, MarkdownContent } from "@/shared/ui/markdown-content
 import { ScrollArea } from "@/shared/ui/scroll-area";
 import { cx, fitTextareaHeight } from "../../appUtils";
 import { useMobileSheetDrag } from "../../hooks/useMobileSheetDrag";
+import { useMobileSheetTop } from "../../hooks/useMobileSheetTop";
 import {
   DetailDbReference,
   DetailEmptyTab,
@@ -60,6 +61,7 @@ export function ActivityDetailEditor({
     enabled: mode === "mobile",
     onClose: closeEditor,
   });
+  const mobileSheetTop = useMobileSheetTop();
 
   useEffect(() => {
     if (!titleRef.current) return;
@@ -214,10 +216,10 @@ export function ActivityDetailEditor({
       >
         {mode === "mobile" ? (
           <div
-            className="actions-detail-drag-zone absolute left-1/2 top-0 flex h-8 w-32 -translate-x-1/2 touch-none cursor-grab items-start justify-center pt-2 active:cursor-grabbing"
+            className="actions-detail-drag-zone absolute left-1/2 top-0 flex h-6 w-32 -translate-x-1/2 touch-none cursor-grab items-start justify-center pt-1.5 active:cursor-grabbing"
           >
             <span
-              className="actions-detail-grabber h-1.5 w-[50px] rounded-full bg-muted-foreground/30"
+              className="actions-detail-grabber h-1 w-11 rounded-full bg-muted-foreground/30"
               aria-hidden="true"
             />
           </div>
@@ -276,7 +278,7 @@ export function ActivityDetailEditor({
         <aside
           ref={sheetRef}
           className="actions-detail-panel mobile absolute inset-x-0 bottom-0 top-[env(safe-area-inset-top)] z-[1] grid min-h-0 min-w-0 grid-rows-[auto_auto_auto_minmax(0,1fr)] gap-3 overflow-hidden rounded-t-2xl border-t border-border bg-card px-[18px] pb-[env(safe-area-inset-bottom)] pt-2 shadow-xl animate-[mobile-detail-sheet-in_180ms_ease-out] will-change-transform"
-          style={mobileSheetStyle}
+          style={{ ...mobileSheetStyle, top: mobileSheetTop } as CSSProperties}
           aria-label="Редактирование действия"
           onKeyDown={onKeyDown}
           {...sheetDragHandlers}

@@ -31,6 +31,7 @@ describe("BrightOsApp actions", () => {
     await waitFor(() => expect(title).toHaveFocus());
     expect(title).toHaveAttribute("placeholder", "Что бы вы хотели сделать?");
     expect(title).toHaveAttribute("enterkeyhint", "enter");
+    expect(document.querySelector(".mobile-create-grabber")).toHaveClass("h-1", "w-11");
     expect(document.querySelector(".mobile-create-text")).toHaveClass("overflow-y-auto");
     expect(title).toHaveClass("overflow-hidden", "text-lg/7", "font-semibold", "text-foreground");
 
@@ -71,6 +72,27 @@ describe("BrightOsApp actions", () => {
       );
     });
     await waitFor(() => expect(screen.queryByRole("button", { name: "Продолжить черновик действия" })).not.toBeInTheDocument());
+  });
+
+  it("closes the mobile create composer by pulling down and keeps the draft", async () => {
+    render(<BrightOsApp />);
+
+    fireEvent.click(document.querySelector(".actions-fab") as HTMLElement);
+    const editor = document.querySelector(".actions-mobile-editor") as HTMLElement;
+    expect(editor).toBeInstanceOf(HTMLElement);
+    fireEvent.change(screen.getByRole("textbox", { name: "Добавить действие" }), { target: { value: "Свайп-черновик" } });
+
+    Object.defineProperty(editor, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({ bottom: 500, height: 400, left: 0, right: 360, top: 100, width: 360, x: 0, y: 100 }),
+    });
+    fireEvent.touchStart(editor, { changedTouches: [{ identifier: 1, clientX: 180, clientY: 120 }] });
+    fireEvent.touchMove(editor, { changedTouches: [{ identifier: 1, clientX: 180, clientY: 260 }] });
+    fireEvent.touchEnd(editor, { changedTouches: [{ identifier: 1, clientX: 180, clientY: 260 }] });
+
+    await waitFor(() => expect(document.querySelector(".actions-mobile-overlay")).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Продолжить черновик действия" }));
+    expect(screen.getByRole("textbox", { name: "Добавить действие" })).toHaveValue("Свайп-черновик");
   });
 
   it("keeps separate mobile create drafts while switching Actions and Inbox", async () => {
