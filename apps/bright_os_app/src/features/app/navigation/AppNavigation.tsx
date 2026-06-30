@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, type TouchEventHandler } from "react";
 import { Archive, Cpu, Download, LogOut, Menu, PanelLeftClose, Settings, type LucideIcon } from "lucide-react";
 import type { AppVersionState } from "@/shared/api/brightOsApi";
-import { APP_VERSION } from "@/shared/config/runtime";
+import { APP_VERSION, ENVIRONMENT_BADGE_LABEL, isProductionEnvironment } from "@/shared/config/runtime";
 import { installAndroidBackHandler } from "@/shared/platform/platform";
 import type { BrightOtaState } from "@/shared/platform/ota";
 import { Avatar, AvatarFallback } from "@/shared/ui/avatar";
@@ -12,7 +12,7 @@ import { formatHourMinute } from "@/shared/time/format";
 import type { SyncStatus, TimerState } from "@/shared/types/timer";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail, useSidebar } from "@/shared/ui/sidebar";
 import { cx } from "../appUtils";
-import { syncStatusIconToneClasses, syncStatusMeta } from "../chrome/AppChrome";
+import { EnvironmentBadge, syncStatusIconToneClasses, syncStatusMeta } from "../chrome/AppChrome";
 import { useMobileSheetDrag } from "../hooks/useMobileSheetDrag";
 import type { PrimarySectionId, SectionId } from "../appModel";
 import { isPrimarySection, navHref, navItems, sectionTitle } from "../appModel";
@@ -75,6 +75,7 @@ export function DesktopRail({
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
+          <EnvironmentBadgeMenuItem />
           <ConnectionStatusMenuItem status={syncStatus} pendingCount={pendingCount} />
           <EngineMenuItem
             active={section === "engine"}
@@ -292,8 +293,20 @@ function PageMenu({
   );
 }
 
+function EnvironmentBadgeMenuItem() {
+  if (isProductionEnvironment() || !ENVIRONMENT_BADGE_LABEL) return null;
+
+  return (
+    <SidebarMenuItem className="mb-3">
+      <span className="flex h-8 w-full items-center rounded-md pl-2 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:pl-0!">
+        <EnvironmentBadge label={ENVIRONMENT_BADGE_LABEL} className="h-6 min-w-6 px-1" />
+      </span>
+    </SidebarMenuItem>
+  );
+}
+
 function ConnectionStatusMenuItem({ status, pendingCount }: { status: SyncStatus; pendingCount: number }) {
-  const { label, shortLabel, tone, icon: Icon, spinning } = syncStatusMeta(status, pendingCount);
+  const { label, tone, icon: Icon, spinning } = syncStatusMeta(status, pendingCount);
 
   return (
     <SidebarMenuItem>
@@ -308,7 +321,6 @@ function ConnectionStatusMenuItem({ status, pendingCount }: { status: SyncStatus
         role="status"
       >
         <Icon className={cx(spinning && "animate-spin")} aria-hidden="true" />
-        <span className="truncate group-data-[collapsible=icon]:hidden">{shortLabel}</span>
       </span>
     </SidebarMenuItem>
   );

@@ -31,6 +31,7 @@ export function ScreenHeader({
   icon: Icon,
   syncStatus,
   pendingCount,
+  showEnvironmentBadge = true,
   showSyncStatus = true,
   leading,
   trailing,
@@ -39,6 +40,7 @@ export function ScreenHeader({
   icon: LucideIcon;
   syncStatus: SyncStatus;
   pendingCount: number;
+  showEnvironmentBadge?: boolean;
   showSyncStatus?: boolean;
   leading?: ReactNode;
   trailing?: ReactNode;
@@ -57,16 +59,16 @@ export function ScreenHeader({
       </div>
       <div className="topbar-actions flex shrink-0 items-center gap-2.5 max-[860px]:max-w-[min(184px,50vw)] max-[460px]:max-w-[min(174px,50vw)]" data-galaxy-interaction-block>
         {trailing}
-        {!isProductionEnvironment() && ENVIRONMENT_BADGE_LABEL ? <EnvironmentBadge label={ENVIRONMENT_BADGE_LABEL} /> : null}
+        {showEnvironmentBadge && !isProductionEnvironment() && ENVIRONMENT_BADGE_LABEL ? <EnvironmentBadge label={ENVIRONMENT_BADGE_LABEL} /> : null}
         {showSyncStatus ? <StatusPill status={syncStatus} pendingCount={pendingCount} /> : null}
       </div>
     </header>
   );
 }
 
-function EnvironmentBadge({ label }: { label: string }) {
+export function EnvironmentBadge({ label, className }: { label: string; className?: string }) {
   return (
-    <span className="inline-grid h-[30px] min-w-[30px] place-items-center rounded-md border border-border bg-card px-2 text-xs font-semibold text-muted-foreground">
+    <span className={cx("inline-grid h-[30px] min-w-[30px] place-items-center rounded-md border border-border bg-card px-2 text-xs font-semibold text-muted-foreground", className)}>
       {label}
     </span>
   );
@@ -251,21 +253,20 @@ function StatusPill({ status, pendingCount }: { status: SyncStatus; pendingCount
   );
 }
 
-export function syncStatusMeta(status: SyncStatus, pendingCount: number): { label: string; shortLabel: string; tone: Tone; icon: LucideIcon; spinning?: boolean } {
-  if (status === "synced") return { label: "синхронизировано", shortLabel: "Синхронизировано", tone: "ok", icon: CheckCircle2 };
+export function syncStatusMeta(status: SyncStatus, pendingCount: number): { label: string; tone: Tone; icon: LucideIcon; spinning?: boolean } {
+  if (status === "synced") return { label: "синхронизировано", tone: "ok", icon: CheckCircle2 };
   if (status === "pending_sync") {
     return {
       label: pendingCount > 0 ? `в очереди: ${pendingCount}` : "ожидает синхронизации",
-      shortLabel: pendingCount > 0 ? "Очередь" : "Ожидание",
       tone: "warn",
       icon: Loader2,
       spinning: true,
     };
   }
-  if (status === "offline") return { label: "оффлайн", shortLabel: "Оффлайн", tone: "muted", icon: WifiOff };
-  if (status === "auth_required") return { label: "нужен вход", shortLabel: "Вход", tone: "bad", icon: Lock };
-  if (status === "sync_failed") return { label: "сбой", shortLabel: "Сбой", tone: "bad", icon: TriangleAlert };
-  return { label: "подключение", shortLabel: "Подключение", tone: "muted", icon: Loader2, spinning: true };
+  if (status === "offline") return { label: "оффлайн", tone: "muted", icon: WifiOff };
+  if (status === "auth_required") return { label: "нужен вход", tone: "bad", icon: Lock };
+  if (status === "sync_failed") return { label: "сбой", tone: "bad", icon: TriangleAlert };
+  return { label: "подключение", tone: "muted", icon: Loader2, spinning: true };
 }
 
 function IconGlyph({ emoji, className = "" }: { emoji: string; className?: string }) {
