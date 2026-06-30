@@ -70,6 +70,7 @@ describe("BrightOsApp inbox", () => {
     expect(screen.queryByRole("checkbox", { name: "Новое письмо" })).not.toBeInTheDocument();
     expect(screen.queryByText("Выполнено")).not.toBeInTheDocument();
     expect(screen.getByText("Тип входящего")).toBeInTheDocument();
+    expect(inboxRow).toHaveClass("max-[860px]:select-none");
 
     fireEvent.click(title);
     await waitFor(() => expect(screen.getByRole("button", { name: "Закрыть редактор" })).toBeInTheDocument());

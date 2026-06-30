@@ -164,6 +164,20 @@ test("opens and closes mobile Inbox info as a bottom sheet", async ({ page }, te
   await expect(page.locator(".mobile-context-sheet")).toHaveCount(0);
 });
 
+test("prevents text selection on mobile inbox rows", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "mobile-only inbox row selection");
+
+  await page.goto("/inbox");
+  await page.locator(".actions-fab").click();
+  await page.getByRole("textbox", { name: "Добавить входящее" }).fill("Не выделять текст");
+  await page.getByRole("textbox", { name: "Описание входящего" }).fill("Долгий тап не должен выделять описание");
+  await page.getByRole("button", { name: "Добавить входящее" }).click();
+
+  const row = page.locator(".action-row").first();
+  await expect(row).toContainText("Не выделять текст");
+  await expect(row).toHaveCSS("user-select", "none");
+});
+
 test("keeps a single mobile action compact without creating empty scroll", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "mobile-only action layout");
 

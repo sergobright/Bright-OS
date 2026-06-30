@@ -378,6 +378,8 @@ describe("BrightOsApp actions", () => {
 
     expect(activeRow.querySelector(".action-row-surface")).toHaveClass("grid-cols-[20px_28px_minmax(0,1fr)]");
     expect(completedRow.querySelector(".action-row-surface")).toHaveClass("grid-cols-[20px_28px_minmax(0,1fr)]");
+    expect(activeRow).toHaveClass("max-[860px]:select-none");
+    expect(completedRow).toHaveClass("max-[860px]:select-none");
     expect(activeRow.querySelector(".action-drag-handle svg")).toBeInTheDocument();
     expect(completedRow.querySelector(".action-drag-placeholder")).toBeInTheDocument();
     expect(completedRow.querySelector(".action-drag-handle")).not.toBeInTheDocument();
