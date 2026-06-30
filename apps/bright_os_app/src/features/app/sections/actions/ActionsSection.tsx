@@ -2,14 +2,15 @@
 
 import type { CSSProperties, FormEvent, KeyboardEvent, MouseEvent, PointerEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronDown, Plus } from "lucide-react";
+import { ChevronDown, FilePenLine, Plus } from "lucide-react";
 import { installAndroidBackHandler } from "@/shared/platform/platform";
-import { cleanTitle } from "@/shared/activities/text";
+import { cleanTitle, TITLE_MAX_LENGTH } from "@/shared/activities/text";
 import type { ActivityItem, ActivitiesState, ActivityStatus } from "@/shared/types/activities";
-import { Button } from "@/shared/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/shared/ui/input-group";
 import { ScrollArea } from "@/shared/ui/scroll-area";
 import { cx } from "../../appUtils";
+import { MobileCreateComposer, mobileCreateDraftHasText, type MobileCreateDraft } from "../MobileCreateComposer";
+import { useMobileSheetTop } from "../../hooks/useMobileSheetTop";
 import { ActionRow, type DetailTitleFocus } from "./ActionRow";
 import { SortableActionList } from "./ActionList";
 import { ActionsInfoPanel } from "./ActionsInfoPanel";
@@ -26,25 +27,28 @@ export function ActionsSection({
   onSetStatus,
   onDelete,
   onReorder,
+  mobileCreateDraft,
+  onMobileCreateDraftChange,
   onMobileOverlayChange,
   autoFocusAddInput,
 }: {
   state: ActivitiesState;
   localSnapshotReady: boolean;
   autoFocusAddInput: boolean;
-  onCreate: (title: string) => Promise<void>;
+  onCreate: (title: string, descriptionMd?: string) => Promise<void>;
   onUpdateTitle: (action: ActivityItem, title: string) => Promise<void>;
   onAutosaveDetails: (action: ActivityItem, title: string, descriptionMd: string) => Promise<void>;
   onSetStatus: (action: ActivityItem, status: ActivityStatus) => Promise<void>;
   onDelete: (action: ActivityItem) => Promise<void>;
   onReorder: (orderedIds: string[], movedAction: ActivityItem) => Promise<void>;
+  mobileCreateDraft: MobileCreateDraft;
+  onMobileCreateDraftChange: (draft: MobileCreateDraft) => void;
   onMobileOverlayChange: (open: boolean) => void;
 }) {
   const [draft, setDraft] = useState("");
   const [mobileCreateOpen, setMobileCreateOpen] = useState(false);
   const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
   const [mobileEditActionId, setMobileEditActionId] = useState<string | null>(null);
-  const [mobileDraft, setMobileDraft] = useState("");
   const [doneOpen, setDoneOpen] = useState(true);
   const [openDeleteActionId, setOpenDeleteActionId] = useState<string | null>(null);
   const [splitPercent, setSplitPercent] = useState(ACTIONS_SPLIT_DEFAULT_PERCENT);
@@ -52,9 +56,8 @@ export function ActionsSection({
   const [detailTitleFocusRequest, setDetailTitleFocusRequest] = useState(0);
   const suppressMobileCreatePopRef = useRef(false);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
-  const splitDragStyleRef = useRef<{ cursor: string; userSelect: string } | null>(null);
+  const splitDragStyleRef = useRef<{ userSelect: string } | null>(null);
   const desktopInputRef = useRef<HTMLInputElement | null>(null);
-  const mobileInputRef = useRef<HTMLInputElement | null>(null);
   const newActions = state.actions.filter((action) => action.status === "New");
   const doneActions = state.actions.filter((action) => action.status === "Done");
   const selectedAction = selectedActionId ? state.actions.find((action) => action.id === selectedActionId) : null;
@@ -63,6 +66,10 @@ export function ActionsSection({
     openDeleteActionId && state.actions.some((action) => action.id === openDeleteActionId) ? openDeleteActionId : null;
   const mobileOverlayOpen = mobileCreateOpen || mobileEditAction != null;
   const desktopSidePanelOpen = true;
+  const mobileSheetTop = useMobileSheetTop();
+  const mobileCreateHasDraft = mobileCreateDraftHasText(mobileCreateDraft);
+  const MobileCreateFabIcon = mobileCreateHasDraft ? FilePenLine : Plus;
+  const mobileCreateFabLabel = mobileCreateHasDraft ? "Продолжить черновик действия" : "Добавить действие";
 
   useEffect(() => {
     if (autoFocusAddInput) desktopInputRef.current?.focus();
@@ -80,15 +87,6 @@ export function ActionsSection({
       onMobileOverlayChange(false);
     };
   }, [mobileOverlayOpen, onMobileOverlayChange]);
-
-  useEffect(() => {
-    if (!mobileCreateOpen) return;
-    const input = mobileInputRef.current;
-    if (!input) return;
-    input.focus();
-    const end = input.value.length;
-    input.setSelectionRange(end, end);
-  }, [mobileCreateOpen]);
 
   function closeOpenDeleteFromOutside(event: MouseEvent<HTMLElement>) {
     if (!visibleOpenDeleteActionId) return;
@@ -109,7 +107,6 @@ export function ActionsSection({
 
   function openMobileCreate() {
     setOpenDeleteActionId(null);
-    setMobileDraft("");
     setMobileCreateOpen(true);
   }
 
@@ -147,19 +144,10 @@ export function ActionsSection({
     if (focusDetailTitle === "end") setDetailTitleFocusRequest((current) => current + 1);
   }
 
-  async function submitMobile(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const title = cleanTitle(mobileDraft);
-    if (!title) return;
+  async function submitMobile(title: string, descriptionMd: string) {
+    await onCreate(title, descriptionMd);
+    onMobileCreateDraftChange({ title: "", descriptionMd: "" });
     closeMobileCreate();
-    setMobileDraft("");
-    await onCreate(title);
-  }
-
-  function onMobileKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Escape") {
-      closeMobileCreate();
-    }
   }
 
   useEffect(() => {
@@ -195,10 +183,8 @@ export function ActionsSection({
     if (!workspace) return;
     event.preventDefault();
     splitDragStyleRef.current = {
-      cursor: document.documentElement.style.cursor,
       userSelect: document.body.style.userSelect,
     };
-    document.documentElement.style.cursor = "ew-resize";
     document.body.style.userSelect = "none";
     event.currentTarget.setPointerCapture(event.pointerId);
   }
@@ -218,7 +204,6 @@ export function ActionsSection({
     }
     const previous = splitDragStyleRef.current;
     if (!previous) return;
-    document.documentElement.style.cursor = previous.cursor;
     document.body.style.userSelect = previous.userSelect;
     splitDragStyleRef.current = null;
   }
@@ -269,6 +254,7 @@ export function ActionsSection({
               <InputGroupInput
                 ref={desktopInputRef}
                 value={draft}
+                maxLength={TITLE_MAX_LENGTH}
                 placeholder="Добавить"
                 aria-label="Добавить"
                 autoFocus={autoFocusAddInput}
@@ -386,49 +372,30 @@ export function ActionsSection({
         <button
           type="button"
           className="actions-fab absolute bottom-[18px] right-[18px] z-[26] hidden h-[58px] w-[58px] place-items-center rounded-full border-0 bg-primary text-primary-foreground shadow-lg max-[860px]:grid"
-          aria-label="Добавить действие"
-          title="Добавить действие"
+          aria-label={mobileCreateFabLabel}
+          title={mobileCreateFabLabel}
           onClick={openMobileCreate}
         >
-          <Plus aria-hidden="true" />
+          <MobileCreateFabIcon aria-hidden="true" />
         </button>
       ) : null}
 
       {mobileCreateOpen ? (
         <div
           className="actions-mobile-overlay fixed inset-0 z-[80] hidden items-end bg-foreground/25 pb-[env(safe-area-inset-bottom)] max-[860px]:flex dark:bg-background/80"
+          style={{ top: mobileSheetTop } as CSSProperties}
           data-nav-swipe-exclusion
           onClick={closeMobileCreate}
         >
-          <form
-            className="actions-mobile-editor grid min-h-[82px] w-full items-center rounded-t-2xl bg-card px-4 pb-3.5 pt-2.5 shadow-xl"
-            onClick={(event) => event.stopPropagation()}
+          <MobileCreateComposer
+            draft={mobileCreateDraft}
+            titleLabel="Добавить действие"
+            descriptionLabel="Описание действия"
+            submitLabel="Добавить действие"
+            onCancel={closeMobileCreate}
+            onDraftChange={onMobileCreateDraftChange}
             onSubmit={submitMobile}
-          >
-            <InputGroup className="actions-add-form">
-              <InputGroupInput
-                ref={mobileInputRef}
-                value={mobileDraft}
-                placeholder="Добавить действие"
-                aria-label="Добавить действие"
-                onChange={(event) => setMobileDraft(event.target.value)}
-                onKeyDown={onMobileKeyDown}
-              />
-              <InputGroupAddon align="inline-end">
-                <Button
-                  type="submit"
-                  variant="ghost"
-                  size="icon-sm"
-                  className="actions-add-submit text-muted-foreground hover:text-foreground"
-                  aria-label="Добавить действие"
-                  title="Добавить действие"
-                  disabled={!cleanTitle(mobileDraft)}
-                >
-                  <Plus aria-hidden="true" />
-                </Button>
-              </InputGroupAddon>
-            </InputGroup>
-          </form>
+          />
         </div>
       ) : null}
 
