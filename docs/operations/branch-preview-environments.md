@@ -16,6 +16,8 @@ Follow-up branches keep the exact task base recorded by the starter in `.bright-
 
 A pushed preview-class `codex/*` branch allocates or reuses a preview slot through `deploy/scripts/preview-slots.sh`, deploys that slot, and reports the slot URL. If all slots `A` through `E` are occupied, the branch enters the preview queue until a slot is released. No push means no slot/deploy/queue.
 
+If a `codex/*` pull request is closed without merge, GitHub Actions releases that branch's preview slot through the same `release-preview-slot` job used for deleted branches and manual releases. This covers superseded preview branches: the accepted replacement branch releases its own slot through production promotion, and the abandoned branch releases its slot when its PR closes.
+
 If the preview branch changes the Android native boundary, deploy also builds a slot-specific APK and records the APK file plus Android `versionCode` in the preview slot registry/status page. Preview OTA manifests then require that exact `versionCode`, so stale slot APKs block with an APK update screen instead of silently running an incompatible web bundle.
 
 Infrastructure/documentation-only branches can use the Temporal no-preview path when the delivery class is `infra-docs`. That path records `delivery_classified`, `no_preview_required`, `delivery_handoff_*`, and `auto_merge_*` events instead of allocating a slot. Temporal then marks `preview_deploy`, `accepted_preview_promotion`, and `slot_release` as `not_applicable`; after `pr_merged`, the branch lifecycle is complete without a slot.
@@ -31,6 +33,15 @@ scripts/bright-task-start.sh <task-slug>
 ```
 
 The starter fetches `origin/main`, refuses to reuse an existing remote `codex/<task-slug>`, creates a separate worktree under `.codex-worktrees/<task-slug>`, creates `codex/<task-slug>` with `--no-track`, writes ignored local task state under `.bright-task/` including the current Codex thread id, enables `.githooks`, and links existing ignored `node_modules` directories from the main checkout when present. In Codex Desktop run the starter with `sandbox_permissions=require_escalated` immediately because it updates Git worktree metadata. If that is unavailable, stop without project-file changes; do not create or switch to a manual fallback branch in the current checkout, `/srv/projects/bright-os-worktrees`, or `/tmp`. The main checkout and registered non-current worktrees are root-owned read-only because Codex internal file-change events can bypass lifecycle hooks; only ignored `.bright-task/` receipt files remain writable as local task state. After every accepted `main` push, GitHub Actions runs `/srv/opt/bright-os-main-sync.sh` on the VPS so `/srv/projects/bright-os` returns to a clean `origin/main` mirror for new threads and old registered worktrees become read-only.
+
+In Codex Desktop, staging from a task worktree can also need `sandbox_permissions=require_escalated`
+because the worktree index lock is stored under the main checkout's `.git/worktrees/` metadata.
+If an escalated command leaves the task worktree with unusable ownership, repair only that task
+worktree with:
+
+```bash
+scripts/bright-task-repair-permissions.sh <task-slug-or-worktree-path>
+```
 
 Repository Codex hooks are defined in `.codex/hooks.json`:
 
