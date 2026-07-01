@@ -38,11 +38,11 @@ not by directly mutating the production main checkout.
   `TASKS.md` entries
 - **THEN** it creates a `codex/tasks-md-dedupe-*` branch
 - **AND** commits only `TASKS.md`
-- **AND** pushes the branch so the existing infra/docs auto-merge workflow can
-  create and merge the PR
+- **AND** pushes the branch
+- **AND** opens a PR to `main`
+- **AND** enables PR auto-merge with the branch head SHA
 
 #### Scenario: TASKS.md has no duplicate entries
 - **WHEN** the handler finds no required change
 - **THEN** it creates no branch
 - **AND** the schedule is still advanced to the next interval
-

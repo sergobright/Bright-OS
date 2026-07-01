@@ -91,7 +91,7 @@ export async function runDueSchedules({ store, nowDate = new Date(), config = sc
 
 export async function runTasksMdDeduper({ schedule, config, timeoutMs, nowDate = new Date() }) {
   const openPr = openDedupePr(config);
-  if (openPr) return { skipped: true, reason: `open PR already exists: ${openPr}` };
+  if (openPr) return { skipped: true, reason: `open PR already exists: ${openPr}`, prUrl: openPr };
 
   const remoteUrl = command(['git', '-C', config.repoRoot, 'config', '--get', 'remote.origin.url']).stdout.trim();
   if (!remoteUrl) throw new Error('remote.origin.url is not configured');
@@ -127,11 +127,13 @@ export async function runTasksMdDeduper({ schedule, config, timeoutMs, nowDate =
       env: gitCommitEnv(config.env),
       timeoutMs: config.gitTimeoutMs
     });
+    const headSha = command(['git', '-C', worktree, 'rev-parse', 'HEAD'], { timeoutMs: config.gitTimeoutMs }).stdout.trim();
     command(['git', '-C', worktree, 'push', '-u', 'origin', branch], {
       env: gitCommitEnv(config.env),
       timeoutMs: config.gitTimeoutMs
     });
-    return { branch };
+    const prUrl = createDedupePr({ config, cwd: worktree, branch, headSha });
+    return { branch, prUrl };
   } finally {
     fs.rmSync(worktree, { recursive: true, force: true });
   }
@@ -215,11 +217,40 @@ function openDedupePr(config) {
     '--state',
     'open',
     '--json',
-    'headRefName',
+    'headRefName,url',
     '--jq',
-    `.[] | select(.headRefName | startswith("${TASKS_BRANCH_PREFIX}")) | .headRefName`
+    `.[] | select(.headRefName | startswith("${TASKS_BRANCH_PREFIX}")) | .url`
   ], { cwd: config.repoRoot, timeoutMs: config.gitTimeoutMs });
   return result.stdout.trim().split('\n').find(Boolean) ?? null;
+}
+
+function createDedupePr({ config, cwd, branch, headSha }) {
+  const prUrl = command([
+    'gh',
+    'pr',
+    'create',
+    '--base',
+    'main',
+    '--head',
+    branch,
+    '--title',
+    'Deduplicate TASKS.md entries',
+    '--body',
+    'Automated TASKS.md maintenance by the Bright OS scheduler. The handler only updates TASKS.md and enables auto-merge through normal branch protection.'
+  ], { cwd, env: gitCommitEnv(config.env), timeoutMs: config.gitTimeoutMs }).stdout.trim();
+  if (!prUrl) throw new Error('gh pr create did not return a PR URL');
+
+  command([
+    'gh',
+    'pr',
+    'merge',
+    prUrl,
+    '--squash',
+    '--auto',
+    '--match-head-commit',
+    headSha
+  ], { cwd, env: gitCommitEnv(config.env), timeoutMs: config.gitTimeoutMs });
+  return prUrl;
 }
 
 function command(args, { cwd, env = process.env, timeoutMs = 30000 } = {}) {

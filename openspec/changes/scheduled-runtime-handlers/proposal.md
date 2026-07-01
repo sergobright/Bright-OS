@@ -5,7 +5,7 @@
 Add a small server-side scheduler for runtime handlers. A systemd timer wakes a
 Node runner every five minutes; SQLite decides which registered handler is due.
 The first scheduled handler deduplicates root `TASKS.md` every six hours by
-opening an auto-merged `codex/tasks-md-dedupe-*` infra/docs PR.
+opening a `codex/tasks-md-dedupe-*` infra/docs PR and enabling auto-merge.
 
 ## Capabilities
 
@@ -15,7 +15,7 @@ opening an auto-merged `codex/tasks-md-dedupe-*` infra/docs PR.
 - Run scheduled handlers through `brightos-scheduler.timer` and
   `brightos-scheduler.service`.
 - Keep `TASKS.md` changes in Git branch/PR flow instead of dirtying the main
-  server checkout.
+  server checkout, with branch protection/auto-merge landing the PR.
 
 ## Rationale
 
@@ -29,4 +29,3 @@ due/lock/run state.
 This is a runtime/product change because it adds server runtime code, SQLite
 schema, and systemd units. It must pass API and OpenSpec checks and finish
 through the preview delivery flow.
-
