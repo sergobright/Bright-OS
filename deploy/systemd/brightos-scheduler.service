@@ -7,6 +7,8 @@ Wants=network-online.target
 Type=oneshot
 User=bright-os
 Group=bright-os
+SupplementaryGroups=bright-deploy
+UMask=0002
 WorkingDirectory=/srv/projects/bright-os/services/bright_os_api
 EnvironmentFile=/etc/bright-os/bright-os-api.env
 Environment=BRIGHT_OS_ROOT=/srv/projects/bright-os
@@ -18,4 +20,3 @@ Environment=HOME=/srv/opt/codex-runtime/bright-os
 ExecStart=/srv/opt/node-v22.16.0/bin/node src/scheduler-runner.js
 NoNewPrivileges=true
 PrivateTmp=true
-
