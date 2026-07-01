@@ -32,6 +32,7 @@ const INBOX_MOBILE_CREATE_DRAFT_STORAGE_KEY = "bright_os_inbox_mobile_create_dra
 
 export function BrightOsApp({ initialSection = "actions" }: { initialSection?: SectionId }) {
   const app = useBrightOsAppState(initialSection);
+  const [mobileMenuKind, setMobileMenuKind] = useState<"rail" | "burger">("burger");
   const [actionsMobileCreateDraft, setActionsMobileCreateDraft] = useStoredMobileCreateDraft(ACTIONS_MOBILE_CREATE_DRAFT_STORAGE_KEY);
   const [inboxMobileCreateDraft, setInboxMobileCreateDraft] = useStoredMobileCreateDraft(INBOX_MOBILE_CREATE_DRAFT_STORAGE_KEY);
   const mobileViewport = useMountedMobileNavigationViewport();
@@ -40,9 +41,14 @@ export function BrightOsApp({ initialSection = "actions" }: { initialSection?: S
   const adjacentSection = app.swipeNavigation.visual?.to;
   const apkBlocked = isDevPreviewApkIncompatible(app.otaState);
   const mobileMenuSwipe = useLeftEdgeMenuSwipe(
-    () => app.setMobileMenuOpen(true),
+    () => openMobileMenu("rail"),
     !app.mobileMenuOpen && !app.mobileContextPanel && !app.actionOverlayOpen,
   );
+
+  function openMobileMenu(kind: "rail" | "burger") {
+    setMobileMenuKind(kind);
+    app.setMobileMenuOpen(true);
+  }
 
   useEffect(() => {
     sectionRef.current = app.section;
@@ -68,7 +74,7 @@ export function BrightOsApp({ initialSection = "actions" }: { initialSection?: S
           icon={sectionIcon(screenSection)}
           syncStatus={app.displaySyncStatus}
           pendingCount={app.totalPendingCount}
-          leading={isPrimarySection(screenSection) ? <MobileMenuButton onClick={() => app.setMobileMenuOpen(true)} /> : null}
+          leading={isPrimarySection(screenSection) ? <MobileMenuButton onClick={() => openMobileMenu("burger")} /> : null}
           trailing={
             screenSection === "actions" && mobileViewport ? (
               <IconButton icon={Info} label="Информация о действиях" active={app.actionsInfoActive} onClick={app.toggleActionsInfoPanel} />
@@ -181,6 +187,8 @@ export function BrightOsApp({ initialSection = "actions" }: { initialSection?: S
         otaState={app.otaState}
         versionError={app.versionError}
         versionRefreshing={app.versionRefreshing}
+        syncStatus={app.displaySyncStatus}
+        pendingCount={app.totalPendingCount}
         onSettings={app.openSettingsPage}
         onEngine={() => app.selectSection("engine")}
         onArchive={() => app.selectSection("archive")}
@@ -219,10 +227,11 @@ export function BrightOsApp({ initialSection = "actions" }: { initialSection?: S
       />
       <MobileRailMenuButton
         hidden={app.actionOverlayOpen || app.mobileContextPanel != null || app.mobileMenuOpen}
-        onClick={() => app.setMobileMenuOpen(true)}
+        onClick={() => openMobileMenu("rail")}
       />
       {app.mobileMenuOpen ? (
         <MobileProfileDrawer
+          mode={mobileMenuKind}
           section={app.section}
           appVersionState={app.versionState}
           otaRefreshing={app.otaRefreshing}

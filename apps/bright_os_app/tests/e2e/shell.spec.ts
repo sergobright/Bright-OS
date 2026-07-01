@@ -14,6 +14,8 @@ test("renders mobile and desktop navigation without starter content", async ({ p
   } else {
     await expect(page.getByRole("textbox", { name: "Добавить" })).toBeVisible();
     await expect(page.locator(".desktop-rail")).toBeVisible();
+    await expect(page.locator(".desktop-rail .status-pill")).toBeVisible();
+    await expect(page.locator(".section-page-current .topbar .status-pill")).toBeHidden();
     await expect(page.getByRole("button", { name: "Свернуть меню" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Развернуть меню" })).toHaveCount(0);
     await expect(page.locator(".desktop-rail [data-rail-page-title]")).toHaveCount(0);
@@ -46,6 +48,13 @@ test("keeps the desktop rail static and compact across reloads", async ({ page }
     .toBeLessThanOrEqual(50);
   await expect(page.getByRole("button", { name: "Свернуть меню" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Развернуть меню" })).toHaveCount(0);
+
+  for (const title of ["Входящие", "Фокус"]) {
+    await page.getByRole("button", { name: title }).last().click();
+    await expect(page.getByRole("heading", { name: title })).toBeVisible();
+    await expect(page.locator(".desktop-rail").getByRole("button", { name: "Настройки" })).toBeVisible();
+    await expect(page.locator(".desktop-rail").getByRole("button", { name: "Архив" })).toBeVisible();
+  }
 
   await page.reload();
   await expect(page.locator(".desktop-rail")).not.toHaveClass(/expanded/);

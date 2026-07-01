@@ -54,16 +54,16 @@ export function ScreenHeader({
       </div>
       <div className="topbar-actions flex shrink-0 items-center gap-2.5 max-[860px]:max-w-[min(184px,50vw)] max-[460px]:max-w-[min(174px,50vw)]" data-galaxy-interaction-block>
         {trailing}
-        {!isProductionEnvironment() && ENVIRONMENT_BADGE_LABEL ? <EnvironmentBadge label={ENVIRONMENT_BADGE_LABEL} /> : null}
-        <StatusPill status={syncStatus} pendingCount={pendingCount} />
+        {!isProductionEnvironment() && ENVIRONMENT_BADGE_LABEL ? <EnvironmentBadge className="min-[861px]:hidden" label={ENVIRONMENT_BADGE_LABEL} /> : null}
+        <StatusPill className="min-[861px]:hidden" status={syncStatus} pendingCount={pendingCount} />
       </div>
     </header>
   );
 }
 
-function EnvironmentBadge({ label }: { label: string }) {
+export function EnvironmentBadge({ className, label }: { className?: string; label: string }) {
   return (
-    <span className="inline-grid h-[30px] min-w-[30px] place-items-center rounded-md border border-border bg-card px-2 text-xs font-semibold text-muted-foreground">
+    <span className={cx("inline-grid h-[30px] min-w-[30px] place-items-center rounded-md border border-border bg-card px-2 text-xs font-semibold text-muted-foreground", className)}>
       {label}
     </span>
   );
@@ -210,7 +210,7 @@ export function MobileContextSheet({
   );
 }
 
-function StatusPill({ status, pendingCount }: { status: SyncStatus; pendingCount: number }) {
+export function StatusPill({ className, status, pendingCount }: { className?: string; status: SyncStatus; pendingCount: number }) {
   const { label, tone, icon: Icon, spinning } = statusMeta(status, pendingCount);
 
   return (
@@ -218,6 +218,7 @@ function StatusPill({ status, pendingCount }: { status: SyncStatus; pendingCount
       className={cx(
         "status-pill inline-grid h-[42px] w-[42px] shrink-0 place-items-center rounded-lg border-0 bg-transparent p-0",
         syncStatusIconToneClasses[tone],
+        className,
       )}
       title={label}
       aria-label={label}

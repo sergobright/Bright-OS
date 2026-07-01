@@ -50,8 +50,7 @@ The Next.js client SHALL treat narrow Android phone viewports as a primary suppo
 #### Scenario: Mobile left menu is opened from the header
 - **WHEN** the client is shown on an Android-sized viewport
 - **AND** the user opens the menu from the Actions page header
-- **THEN** the shared left rail drawer opens over the content with a backdrop
-- **AND** the drawer shows the same menu items as the bottom-left left rail menu
+- **THEN** an empty left drawer opens over the content with a backdrop
 - **AND** tapping outside the drawer closes it
 - **AND** horizontal tab swipes are disabled while the drawer is open
 
@@ -59,7 +58,8 @@ The Next.js client SHALL treat narrow Android phone viewports as a primary suppo
 - **WHEN** the client is shown on an Android-sized viewport
 - **AND** the user taps the bottom-left three-dot menu button
 - **THEN** a left rail drawer opens over the content with a backdrop
-- **AND** the drawer shows the same menu items on every page, including `Workspace`, `Настройки`, `Архив`, `Выйти`, and `Engine`
+- **AND** the drawer only shows real action items: `Настройки`, `Архив`, `Выйти`, and `Engine`
+- **AND** the drawer does not show profile text, page-menu labels, or placeholder groups
 - **AND** access to settings and the other drawer actions is available outside the primary bottom tabs
 - **AND** tapping outside the drawer closes it
 - **AND** horizontal tab swipes are disabled while the drawer is open
@@ -79,6 +79,8 @@ The Next.js client SHALL treat narrow Android phone viewports as a primary suppo
 - **THEN** the desktop rail is always rendered as a narrow static icon rail
 - **AND** the rail has no expand/collapse control
 - **AND** the rail width is not restored from or persisted to a sidebar cookie
+- **AND** the rail exposes the same action items on all primary dock pages
+- **AND** the rail keeps the sync status icon and preview environment badge
 - **AND** the page header continues to show the current section icon
 
 #### Scenario: Desktop screens use the full workspace

@@ -1,22 +1,26 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { createMobileAction, dispatchElementTouch, dispatchTouch, dragTouch, horizontalCenterOffset, openProfileMenuItem, swipeActionRowLeft, swipeTouch } from "./shell-helpers";
 
-test("opens the same mobile left menu from the header and bottom-left button", async ({ page }, testInfo) => {
+test("keeps the burger drawer empty and opens the action rail from the aligned three-dot button", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "mobile-only drawer");
 
   await page.goto("/");
+  const railButton = await page.locator(".mobile-rail-menu-button").boundingBox();
+  const dockButton = await page.locator(".mobile-nav .nav-button").first().boundingBox();
+  expect(Math.abs((railButton?.y ?? 0) + (railButton?.height ?? 0) / 2 - ((dockButton?.y ?? 0) + (dockButton?.height ?? 0) / 2))).toBeLessThanOrEqual(1.5);
+
   await page.locator(".section-page-current .mobile-menu-button").click();
   await expect(page.locator(".mobile-menu-backdrop")).toBeVisible();
-  await expect(page.locator(".mobile-profile-drawer")).toContainText("Workspace");
-  await expect(page.locator(".mobile-profile-drawer")).not.toContainText("Platform");
-  await expect(page.locator(".mobile-profile-drawer")).not.toContainText("Time");
-  await expect(page.locator(".mobile-profile-drawer").getByRole("button", { name: /Engine/ })).toBeVisible();
+  await expect(page.locator(".mobile-profile-drawer")).not.toContainText("Workspace");
+  await expect(page.locator(".mobile-profile-drawer").getByRole("button", { name: /Engine/ })).toHaveCount(0);
   await page.locator(".mobile-menu-backdrop").click({ position: { x: 360, y: 120 } });
   await expect(page.locator(".mobile-menu-backdrop")).toHaveCount(0);
 
   await page.getByRole("button", { name: "Открыть левое меню" }).click();
   await expect(page.locator(".mobile-menu-backdrop")).toBeVisible();
-  await expect(page.locator(".mobile-profile-drawer")).toContainText("Workspace");
+  await expect(page.locator(".mobile-profile-drawer")).not.toContainText("Workspace");
+  await expect(page.locator(".mobile-profile-drawer")).not.toContainText("Меню страницы");
+  await expect(page.locator(".mobile-profile-drawer")).not.toContainText("Действия");
   await expect(page.locator(".mobile-profile-drawer")).not.toContainText("Platform");
   await expect(page.locator(".mobile-profile-drawer")).not.toContainText("Time");
   await expect(page.locator(".mobile-profile-drawer").getByRole("button", { name: /Engine/ })).toBeVisible();
@@ -41,7 +45,7 @@ test("opens Settings from the mobile action rail", async ({ page }, testInfo) =>
 
   await page.goto("/");
   await page.getByRole("button", { name: "Открыть левое меню" }).click();
-  await expect(page.locator(".mobile-profile-drawer")).toContainText("Workspace");
+  await expect(page.locator(".mobile-profile-drawer")).not.toContainText("Workspace");
 
   await expect(page.getByRole("button", { name: "Настройки" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Архив" })).toBeVisible();
@@ -52,7 +56,7 @@ test("opens Settings from the mobile action rail", async ({ page }, testInfo) =>
   await expect(page.getByRole("heading", { name: "Настройки" })).toBeVisible();
 
   await page.getByRole("button", { name: "Открыть левое меню" }).click();
-  await expect(page.locator(".mobile-profile-drawer")).toContainText("Workspace");
+  await expect(page.locator(".mobile-profile-drawer")).not.toContainText("Workspace");
   await expect(page.getByRole("button", { name: "Архив" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Engine/ })).toBeVisible();
 });

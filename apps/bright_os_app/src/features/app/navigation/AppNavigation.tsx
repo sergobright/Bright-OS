@@ -1,16 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useRef, type TouchEventHandler } from "react";
-import { Archive, Cpu, Download, Ellipsis, LogOut, Menu, Settings, type LucideIcon } from "lucide-react";
+import { Archive, Cpu, Download, EllipsisVertical, LogOut, Menu, Settings, type LucideIcon } from "lucide-react";
 import type { AppVersionState } from "@/shared/api/brightOsApi";
-import { APP_VERSION } from "@/shared/config/runtime";
+import { APP_VERSION, ENVIRONMENT_BADGE_LABEL, isProductionEnvironment } from "@/shared/config/runtime";
 import { installAndroidBackHandler } from "@/shared/platform/platform";
 import type { BrightOtaState } from "@/shared/platform/ota";
 import { Avatar, AvatarFallback } from "@/shared/ui/avatar";
 import { FloatingDock } from "@/shared/ui/floating-dock";
 import { formatHourMinute } from "@/shared/time/format";
-import type { TimerState } from "@/shared/types/timer";
+import type { SyncStatus, TimerState } from "@/shared/types/timer";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/shared/ui/sidebar";
+import { EnvironmentBadge, StatusPill } from "../chrome/AppChrome";
 import { cx } from "../appUtils";
 import { useMobileSheetDrag } from "../hooks/useMobileSheetDrag";
 import type { PrimarySectionId, SectionId } from "../appModel";
@@ -24,6 +25,8 @@ export function DesktopRail({
   otaState,
   versionError,
   versionRefreshing,
+  syncStatus,
+  pendingCount,
   onSettings,
   onEngine,
   onArchive,
@@ -35,6 +38,8 @@ export function DesktopRail({
   otaState: BrightOtaState | null;
   versionError: boolean;
   versionRefreshing: boolean;
+  syncStatus: SyncStatus;
+  pendingCount: number;
   onSettings: () => void;
   onEngine: () => void;
   onArchive: () => void;
@@ -52,6 +57,7 @@ export function DesktopRail({
       <SidebarContent>
         <PageMenu
           expanded={false}
+          forceActionMenu
           showEngineItem={false}
           section={section}
           appVersionState={appVersionState}
@@ -66,6 +72,7 @@ export function DesktopRail({
         />
       </SidebarContent>
       <SidebarFooter>
+        <DesktopRailStatus syncStatus={syncStatus} pendingCount={pendingCount} />
         <EngineMenuItem
           active={section === "engine"}
           appVersionState={appVersionState}
@@ -77,6 +84,15 @@ export function DesktopRail({
         />
       </SidebarFooter>
     </Sidebar>
+  );
+}
+
+function DesktopRailStatus({ syncStatus, pendingCount }: { syncStatus: SyncStatus; pendingCount: number }) {
+  return (
+    <div className="desktop-rail-status flex flex-col items-center gap-1 py-1">
+      {!isProductionEnvironment() && ENVIRONMENT_BADGE_LABEL ? <EnvironmentBadge label={ENVIRONMENT_BADGE_LABEL} /> : null}
+      <StatusPill status={syncStatus} pendingCount={pendingCount} />
+    </div>
   );
 }
 
@@ -98,18 +114,19 @@ export function MobileRailMenuButton({ hidden, onClick }: { hidden: boolean; onC
     <button
       type="button"
       className={cx(
-        "mobile-rail-menu-button pointer-events-auto fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-3 z-[70] hidden h-11 w-11 place-items-center rounded-full border-0 bg-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-0 focus-visible:ring-2 focus-visible:ring-ring max-[860px]:grid",
+        "mobile-rail-menu-button pointer-events-auto fixed bottom-[calc(0.25rem+env(safe-area-inset-bottom))] left-3 z-[70] hidden h-11 w-11 place-items-center rounded-full border-0 bg-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-0 focus-visible:ring-2 focus-visible:ring-ring max-[860px]:grid",
         hidden && "max-[860px]:pointer-events-none max-[860px]:invisible max-[860px]:opacity-0",
       )}
       aria-label="Открыть левое меню"
       onClick={onClick}
     >
-      <Ellipsis className="h-5 w-5" aria-hidden="true" />
+      <EllipsisVertical className="h-5 w-5" aria-hidden="true" />
     </button>
   );
 }
 
 export function MobileProfileDrawer({
+  mode,
   section,
   appVersionState,
   otaRefreshing,
@@ -122,6 +139,7 @@ export function MobileProfileDrawer({
   onArchive,
   onLogout,
 }: {
+  mode: "rail" | "burger";
   section: SectionId;
   appVersionState: AppVersionState | null;
   otaRefreshing: boolean;
@@ -194,29 +212,35 @@ export function MobileProfileDrawer({
       <div ref={backdropRef} className="absolute inset-0 bg-foreground/15 dark:bg-background/80" style={backdropStyle} aria-hidden="true" />
       <aside
         ref={sheetRef}
-        className="mobile-profile-drawer flex h-full w-4/5 flex-col border-r border-border bg-card px-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-[calc(12px+env(safe-area-inset-top))] shadow-xl animate-[mobile-drawer-in_180ms_ease-out] [touch-action:pan-y] will-change-transform"
+        className={cx(
+          "mobile-profile-drawer flex h-full flex-col border-r border-border bg-card px-2 pt-[calc(12px+env(safe-area-inset-top))] shadow-xl animate-[mobile-drawer-in_180ms_ease-out] [touch-action:pan-y] will-change-transform",
+          mode === "rail" ? "w-4/5 pb-[calc(1rem+env(safe-area-inset-bottom))]" : "w-16 pb-[calc(0.75rem+env(safe-area-inset-bottom))]",
+        )}
         style={sheetStyle}
-        aria-label="Профиль"
+        aria-label={mode === "rail" ? "Левое меню" : "Пустое меню"}
         {...sheetDragHandlers}
         onClick={(event) => event.stopPropagation()}
       >
-        <ProfileMenu />
-        <div className="flex min-h-0 flex-1 flex-col">
-          <PageMenu
-            forceActionMenu
-            expanded
-            section={section}
-            appVersionState={appVersionState}
-            otaRefreshing={otaRefreshing}
-            otaState={otaState}
-            versionError={versionError}
-            versionRefreshing={versionRefreshing}
-            onSettings={() => closeThen(onSettings)}
-            onEngine={() => closeThen(onEngine)}
-            onArchive={() => closeThen(onArchive)}
-            onLogout={() => closeThenAsync(onLogout)}
-          />
-        </div>
+        {mode === "rail" ? (
+          <div className="flex min-h-0 flex-1 flex-col pt-2">
+            <SidebarMenu>
+              <ActionMenuItem icon={Settings} label="Настройки" active={section === "settings"} onClick={() => closeThen(onSettings)} />
+              <ActionMenuItem icon={Archive} label="Архив" active={section === "archive"} onClick={() => closeThen(onArchive)} />
+              <ActionMenuItem icon={LogOut} label="Выйти" onClick={() => closeThenAsync(onLogout)} />
+            </SidebarMenu>
+            <SidebarMenu className="mt-auto">
+              <EngineMenuItem
+                active={section === "engine"}
+                appVersionState={appVersionState}
+                otaRefreshing={otaRefreshing}
+                otaState={otaState}
+                versionError={versionError}
+                versionRefreshing={versionRefreshing}
+                onClick={() => closeThen(onEngine)}
+              />
+            </SidebarMenu>
+          </div>
+        ) : null}
       </aside>
     </div>
   );
