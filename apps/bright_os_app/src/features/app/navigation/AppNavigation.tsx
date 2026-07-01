@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, type TouchEventHandler } from "react";
-import { Archive, Cpu, Download, LogOut, Menu, PanelLeftClose, Settings, type LucideIcon } from "lucide-react";
+import { Archive, Cpu, Download, Ellipsis, LogOut, Menu, Settings, type LucideIcon } from "lucide-react";
 import type { AppVersionState } from "@/shared/api/brightOsApi";
 import { APP_VERSION } from "@/shared/config/runtime";
 import { installAndroidBackHandler } from "@/shared/platform/platform";
@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback } from "@/shared/ui/avatar";
 import { FloatingDock } from "@/shared/ui/floating-dock";
 import { formatHourMinute } from "@/shared/time/format";
 import type { TimerState } from "@/shared/types/timer";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail, useSidebar } from "@/shared/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/shared/ui/sidebar";
 import { cx } from "../appUtils";
 import { useMobileSheetDrag } from "../hooks/useMobileSheetDrag";
 import type { PrimarySectionId, SectionId } from "../appModel";
@@ -18,7 +18,6 @@ import { isPrimarySection, navHref, navItems, sectionTitle } from "../appModel";
 import { engineSectionView } from "../sections/engine/engineModel";
 
 export function DesktopRail({
-  expanded,
   section,
   appVersionState,
   otaRefreshing,
@@ -30,7 +29,6 @@ export function DesktopRail({
   onArchive,
   onLogout,
 }: {
-  expanded: boolean;
   section: SectionId;
   appVersionState: AppVersionState | null;
   otaRefreshing: boolean;
@@ -45,16 +43,15 @@ export function DesktopRail({
   return (
     <Sidebar
       collapsible="icon"
-      className={cx("desktop-rail max-[860px]:hidden", expanded && "expanded")}
+      className="desktop-rail max-[860px]:hidden"
       aria-label="Основная навигация"
     >
       <SidebarHeader>
-        <ProfileMenu />
-        <RailCollapseButton />
+        <ProfileMenu compact />
       </SidebarHeader>
       <SidebarContent>
         <PageMenu
-          expanded={expanded}
+          expanded={false}
           showEngineItem={false}
           section={section}
           appVersionState={appVersionState}
@@ -79,7 +76,6 @@ export function DesktopRail({
           onClick={onEngine}
         />
       </SidebarFooter>
-      <SidebarRail />
     </Sidebar>
   );
 }
@@ -97,7 +93,24 @@ export function MobileMenuButton({ onClick }: { onClick: () => void }) {
   );
 }
 
+export function MobileRailMenuButton({ hidden, onClick }: { hidden: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className={cx(
+        "mobile-rail-menu-button pointer-events-auto fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-3 z-[70] hidden h-11 w-11 place-items-center rounded-full border-0 bg-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-0 focus-visible:ring-2 focus-visible:ring-ring max-[860px]:grid",
+        hidden && "max-[860px]:pointer-events-none max-[860px]:invisible max-[860px]:opacity-0",
+      )}
+      aria-label="Открыть левое меню"
+      onClick={onClick}
+    >
+      <Ellipsis className="h-5 w-5" aria-hidden="true" />
+    </button>
+  );
+}
+
 export function MobileProfileDrawer({
+  mode,
   section,
   appVersionState,
   otaRefreshing,
@@ -110,6 +123,7 @@ export function MobileProfileDrawer({
   onArchive,
   onLogout,
 }: {
+  mode: "rail" | "empty";
   section: SectionId;
   appVersionState: AppVersionState | null;
   otaRefreshing: boolean;
@@ -188,23 +202,27 @@ export function MobileProfileDrawer({
         {...sheetDragHandlers}
         onClick={(event) => event.stopPropagation()}
       >
-        <ProfileMenu />
-        <div className="flex min-h-0 flex-1 flex-col">
-          <PageMenu
-            forceActionMenu
-            expanded
-            section={section}
-            appVersionState={appVersionState}
-            otaRefreshing={otaRefreshing}
-            otaState={otaState}
-            versionError={versionError}
-            versionRefreshing={versionRefreshing}
-            onSettings={() => closeThen(onSettings)}
-            onEngine={() => closeThen(onEngine)}
-            onArchive={() => closeThen(onArchive)}
-            onLogout={() => closeThenAsync(onLogout)}
-          />
-        </div>
+        {mode === "rail" ? (
+          <>
+            <ProfileMenu />
+            <div className="flex min-h-0 flex-1 flex-col">
+              <PageMenu
+                forceActionMenu
+                expanded
+                section={section}
+                appVersionState={appVersionState}
+                otaRefreshing={otaRefreshing}
+                otaState={otaState}
+                versionError={versionError}
+                versionRefreshing={versionRefreshing}
+                onSettings={() => closeThen(onSettings)}
+                onEngine={() => closeThen(onEngine)}
+                onArchive={() => closeThen(onArchive)}
+                onLogout={() => closeThenAsync(onLogout)}
+              />
+            </div>
+          </>
+        ) : null}
       </aside>
     </div>
   );
@@ -328,7 +346,7 @@ function ActionMenuItem({
 }) {
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton type="button" isActive={active} tooltip={label} onClick={() => void onClick()}>
+      <SidebarMenuButton type="button" aria-label={label} isActive={active} tooltip={label} onClick={() => void onClick()}>
         <Icon aria-hidden="true" />
         <span>{label}</span>
       </SidebarMenuButton>
@@ -336,24 +354,14 @@ function ActionMenuItem({
   );
 }
 
-function ProfileMenu() {
-  const { isMobile, setOpen, state } = useSidebar();
-
-  if (!isMobile && state === "collapsed") {
+function ProfileMenu({ compact = false }: { compact?: boolean }) {
+  if (compact) {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton
-            size="lg"
-            className="rail-profile"
-            data-profile-trigger
-            data-nav-swipe-exclusion
-            type="button"
-            aria-label="Развернуть меню"
-            onClick={() => setOpen(true)}
-          >
+          <div className="rail-profile flex h-12 w-full items-center justify-center rounded-md p-2">
             <ProfileAvatar />
-          </SidebarMenuButton>
+          </div>
         </SidebarMenuItem>
       </SidebarMenu>
     );
@@ -368,23 +376,6 @@ function ProfileMenu() {
         </div>
       </SidebarMenuItem>
     </SidebarMenu>
-  );
-}
-
-function RailCollapseButton() {
-  const { isMobile, setOpen, state } = useSidebar();
-  if (isMobile || state === "collapsed") return null;
-
-  return (
-    <button
-      type="button"
-      className="ml-auto mr-1 grid size-7 place-items-center rounded-md border-0 bg-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-0 focus-visible:ring-2 focus-visible:ring-ring"
-      aria-label="Свернуть меню"
-      title="Свернуть меню"
-      onClick={() => setOpen(false)}
-    >
-      <PanelLeftClose className="size-4" aria-hidden="true" />
-    </button>
   );
 }
 

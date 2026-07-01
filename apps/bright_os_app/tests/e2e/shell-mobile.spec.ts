@@ -1,11 +1,18 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { createMobileAction, dispatchElementTouch, dispatchTouch, dragTouch, horizontalCenterOffset, openProfileMenuItem, swipeActionRowLeft, swipeTouch } from "./shell-helpers";
 
-test("opens the mobile profile drawer with navigation over dimmed content", async ({ page }, testInfo) => {
+test("opens the empty mobile burger drawer and the populated left rail drawer", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "mobile-only drawer");
 
   await page.goto("/");
   await page.locator(".section-page-current .mobile-menu-button").click();
+  await expect(page.locator(".mobile-menu-backdrop")).toBeVisible();
+  await expect(page.locator(".mobile-profile-drawer")).not.toContainText("Workspace");
+  await expect(page.locator(".mobile-profile-drawer").getByRole("button", { name: /Engine/ })).toHaveCount(0);
+  await page.locator(".mobile-menu-backdrop").click({ position: { x: 360, y: 120 } });
+  await expect(page.locator(".mobile-menu-backdrop")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Открыть левое меню" }).click();
   await expect(page.locator(".mobile-menu-backdrop")).toBeVisible();
   await expect(page.locator(".mobile-profile-drawer")).toContainText("Workspace");
   await expect(page.locator(".mobile-profile-drawer")).not.toContainText("Platform");
@@ -17,7 +24,7 @@ test("opens the mobile profile drawer with navigation over dimmed content", asyn
   const viewport = page.viewportSize();
   expect(drawer?.width ?? 0).toBeGreaterThan((viewport?.width ?? 0) * 0.78);
   expect(drawer?.width ?? 0).toBeLessThan((viewport?.width ?? 0) * 0.82);
-  expect((viewport?.height ?? 0) - ((engine?.y ?? 0) + (engine?.height ?? 0))).toBeGreaterThanOrEqual(56);
+  expect((viewport?.height ?? 0) - ((engine?.y ?? 0) + (engine?.height ?? 0))).toBeGreaterThanOrEqual(16);
 
   await dispatchTouch(page, "touchstart", { x: 320, y: 220 });
   await dispatchTouch(page, "touchend", { x: 180, y: 224 });
@@ -31,7 +38,7 @@ test("opens Settings from the mobile action rail", async ({ page }, testInfo) =>
   test.skip(testInfo.project.name !== "mobile", "mobile-only action rail");
 
   await page.goto("/");
-  await page.locator(".section-page-current .mobile-menu-button").click();
+  await page.getByRole("button", { name: "Открыть левое меню" }).click();
   await expect(page.locator(".mobile-profile-drawer")).toContainText("Workspace");
 
   await expect(page.getByRole("button", { name: "Настройки" })).toBeVisible();
@@ -293,7 +300,7 @@ test("reveals and hides the mobile action delete menu by swipe", async ({ page }
   await expect(page.getByRole("textbox", { name: "Название действия: Фокус" })).toHaveCount(0);
 });
 
-test("deletes and restores a mobile action after real touch swipes", async ({ page }, testInfo) => {
+test("deletes and restores a mobile action after row swipes", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "mobile-only archive flow");
 
   await page.goto("/");
@@ -466,7 +473,9 @@ test("closes the mobile activity detail editor from its drag handle", async ({ p
   });
   const editorLocator = page.locator(".actions-detail-panel.mobile");
   await expect(editorLocator).toBeVisible();
-  await expect.poll(async () => (await editorLocator.boundingBox())?.y ?? 999).toBeLessThanOrEqual(20);
+  const topbar = await page.locator(".section-page-current .topbar").boundingBox();
+  const topbarBottom = (topbar?.y ?? 0) + (topbar?.height ?? 0);
+  await expect.poll(async () => Math.abs(((await editorLocator.boundingBox())?.y ?? 999) - Math.ceil(topbarBottom))).toBeLessThanOrEqual(1);
   const dragZone = page.locator(".actions-detail-drag-zone");
   const secondDragZoneBox = await dragZone.boundingBox();
   await dragTouch(

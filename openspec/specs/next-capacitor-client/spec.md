@@ -50,8 +50,15 @@ The Next.js client SHALL treat narrow Android phone viewports as a primary suppo
 #### Scenario: Mobile Actions profile drawer is opened
 - **WHEN** the client is shown on an Android-sized viewport
 - **AND** the user opens the menu from the Actions page header
-- **THEN** a profile drawer opens over the content with a backdrop
-- **AND** the drawer shows only the user avatar, `Bright OS`, and `Workspace`
+- **THEN** an empty left drawer opens over the content with a backdrop
+- **AND** tapping outside the drawer closes it
+- **AND** horizontal tab swipes are disabled while the drawer is open
+
+#### Scenario: Mobile left rail menu is opened
+- **WHEN** the client is shown on an Android-sized viewport
+- **AND** the user taps the bottom-left three-dot menu button
+- **THEN** a left rail drawer opens over the content with a backdrop
+- **AND** the drawer shows the same menu items that were available in the previous mobile profile drawer
 - **AND** tapping outside the drawer closes it
 - **AND** horizontal tab swipes are disabled while the drawer is open
 
@@ -65,13 +72,11 @@ The Next.js client SHALL treat narrow Android phone viewports as a primary suppo
 - **AND** vertically dominant gestures are treated as normal page scrolling
 - **AND** content areas can opt out of tab-swipe navigation for their own horizontal gestures or scrolling
 
-#### Scenario: Desktop rail expansion controls are placed in stable locations
+#### Scenario: Desktop rail is compact and static
 - **WHEN** the client is shown on a desktop-sized web viewport
-- **AND** the desktop rail is collapsed
-- **THEN** the page header shows the current section icon instead of a rail collapse/expand control
-- **AND** clicking the collapsed rail avatar expands the rail
-- **WHEN** the desktop rail is expanded
-- **THEN** the rail collapse control is rendered inside the rail header/profile area
+- **THEN** the desktop rail is always rendered as a narrow static icon rail
+- **AND** the rail has no expand/collapse control
+- **AND** the rail width is not restored from or persisted to a sidebar cookie
 - **AND** the page header continues to show the current section icon
 
 #### Scenario: Desktop screens use the full workspace
