@@ -116,21 +116,23 @@ if [[ "$ENVIRONMENT" != "prod" ]]; then
   find "$TARGET_ROOT" -user "$(id -u)" -exec chmod u+rwX,g+rwX {} +
 fi
 
-if ! "$NODE_BIN" "$SCRIPT_DIR/record-deployment.mjs" \
-  --db "$DB_PATH" \
-  --environment "$ENVIRONMENT" \
-  --slot "$SLOT" \
-  --branch "$BRANCH" \
-  --commit "$COMMIT" \
-  --domain "$DOMAIN" \
-  --web-ota-version "$BUNDLE_VERSION" \
-  --short-changes "$DEPLOY_SHORT_CHANGES" \
-  --detailed-changes "$DEPLOY_DETAILED_CHANGES" \
-  --reason "${BRIGHT_OS_DEPLOY_REASON:-Automated branch delivery}"; then
-  if [[ "$ENVIRONMENT" != preview-* ]]; then
-    exit 1
+if [[ "$ENVIRONMENT" != "prod" || "${BRIGHT_OS_RECORD_PROD_BRANCH_DEPLOYMENT:-false}" == "true" ]]; then
+  if ! "$NODE_BIN" "$SCRIPT_DIR/record-deployment.mjs" \
+    --db "$DB_PATH" \
+    --environment "$ENVIRONMENT" \
+    --slot "$SLOT" \
+    --branch "$BRANCH" \
+    --commit "$COMMIT" \
+    --domain "$DOMAIN" \
+    --web-ota-version "$BUNDLE_VERSION" \
+    --short-changes "$DEPLOY_SHORT_CHANGES" \
+    --detailed-changes "$DEPLOY_DETAILED_CHANGES" \
+    --reason "${BRIGHT_OS_DEPLOY_REASON:-Automated branch delivery}"; then
+    if [[ "$ENVIRONMENT" != preview-* ]]; then
+      exit 1
+    fi
+    echo "Warning: preview deployment metadata was not recorded; acceptance will use branch and commit fallback metadata." >&2
   fi
-  echo "Warning: preview deployment metadata was not recorded; acceptance will use branch and commit fallback metadata." >&2
 fi
 
 if [[ "$ENVIRONMENT" != "prod" ]]; then
